@@ -1,0 +1,183 @@
+type Vec2f = { x: float32, y: float32 };
+type Vec2d = { x: float64, y: float64 };
+type Bounds = { min: float32, max: float32, span: float32 };
+
+define add(a: float32, b: float32) -> float32 {
+    return a + b;
+}
+
+define sub(a: float32, b: float32) -> float32 {
+    return a - b;
+}
+
+define mul(a: float32, b: float32) -> float32 {
+    return a * b;
+}
+
+define div(a: float32, b: float32) -> float32 {
+    return a / b;
+}
+
+define negate(a: float32) -> float32 {
+    return -a;
+}
+
+define average(a: float32, b: float32) -> float32 {
+    return (a + b) / 2.0;
+}
+
+define lerp(a: float32, b: float32, t: float32) -> float32 {
+    return a + (b - a) * t;
+}
+
+define add64(a: float64, b: float64) -> float64 {
+    return a + b;
+}
+
+define square64(a: float64) -> float64 {
+    return a * a;
+}
+
+define less(a: float32, b: float32) -> boolean {
+    return a < b;
+}
+
+define equal(a: float32, b: float32) -> boolean {
+    return a == b;
+}
+
+define in_bounds(x: float32, lo: float32, hi: float32) -> boolean {
+    return x >= lo && x <= hi;
+}
+
+define max_of(a: float32, b: float32) -> float32 {
+    if (a > b) { return a; }
+    return b;
+}
+
+define min_of(a: float32, b: float32) -> float32 {
+    if (a < b) { return a; }
+    return b;
+}
+
+define dot(a: Vec2f, b: Vec2f) -> float32 {
+    return a.x * b.x + a.y * b.y;
+}
+
+define length_sq(v: Vec2f) -> float32 {
+    return v.x * v.x + v.y * v.y;
+}
+
+define midpoint(a: Vec2f, b: Vec2f) -> Vec2f {
+    return { x: (a.x + b.x) / 2.0, y: (a.y + b.y) / 2.0 };
+}
+
+define span_of(b: Bounds) -> float32 {
+    return b.max - b.min;
+}
+
+define dot64(a: Vec2d, b: Vec2d) -> float64 {
+    return a.x * b.x + a.y * b.y;
+}
+
+define to_float(x: uint8) -> float32 {
+    return x as float32;
+}
+
+define to_double(x: uint32) -> float64 {
+    return x as float64;
+}
+
+define trunc_to_u8(x: float32) -> uint8 {
+    return x as: trunc_sat uint8;
+}
+
+define floor_to_i32(x: float32) -> int32 {
+    return x as: floor_sat int32;
+}
+
+define ceil_to_i32(x: float32) -> int32 {
+    return x as: ceil_sat int32;
+}
+
+define round_to_i32(x: float32) -> int32 {
+    return x as: round_sat int32;
+}
+
+define widen(x: float32) -> float64 {
+    return x as float64;
+}
+
+define narrow(x: float64) -> float32 {
+    return x as: sat float32;
+}
+
+define accumulate(n: uint8[0, 100]) -> float32 {
+    define total: float32 = 0.0;
+    define i: uint8 = 0;
+    while (i < n) {
+        total += 1.5;
+        i += 1;
+    }
+    return total;
+}
+
+define halve_times(x: float32, n: uint8[0, 30]) -> float32 {
+    define v: float32 = x;
+    define i: uint8 = 0;
+    while (i < n) {
+        v = v / 2.0;
+        i += 1;
+    }
+    return v;
+}
+
+define main() -> int32 {
+
+    if (add(1.5, 2.25) != 3.75) { return 1; }
+    if (sub(5.0, 1.25) != 3.75) { return 2; }
+    if (mul(1.5, 4.0) != 6.0) { return 3; }
+    if (div(8.0, 4.0) != 2.0) { return 4; }
+    if (negate(2.5) != -2.5) { return 5; }
+    if (average(2.0, 4.0) != 3.0) { return 6; }
+    if (lerp(0.0, 10.0, 0.5) != 5.0) { return 7; }
+    if (add64(0.5, 0.25) != 0.75) { return 8; }
+    if (square64(1.5) != 2.25) { return 9; }
+
+    if (!less(1.0, 2.0)) { return 10; }
+    if (less(2.0, 2.0)) { return 11; }
+    if (!equal(3.5, 3.5)) { return 12; }
+    if (!in_bounds(1.5, 1.0, 2.0)) { return 13; }
+    if (in_bounds(2.5, 1.0, 2.0)) { return 14; }
+    if (max_of(1.0, 2.0) != 2.0) { return 15; }
+    if (min_of(1.0, 2.0) != 1.0) { return 16; }
+
+    define a: Vec2f = { x: 3.0, y: 4.0 };
+    define b: Vec2f = { x: 1.0, y: 2.0 };
+    if (dot(a, b) != 11.0) { return 17; }
+    if (length_sq(a) != 25.0) { return 18; }
+
+    define m: Vec2f = midpoint(a, b);
+    if (m.x != 2.0 || m.y != 3.0) { return 19; }
+
+    define bounds: Bounds = { min: 1.0, max: 4.0 };
+    if (span_of(bounds) != 3.0) { return 20; }
+
+    define d1: Vec2d = { x: 1.5, y: 2.5 };
+    define d2: Vec2d = { x: 2.0, y: 2.0 };
+    if (dot64(d1, d2) != 8.0) { return 21; }
+
+    if (to_float(255) != 255.0) { return 22; }
+    if (to_double(1000) != 1000.0) { return 23; }
+    if (trunc_to_u8(3.75) != 3) { return 24; }
+    if (floor_to_i32(3.75) != 3) { return 25; }
+    if (ceil_to_i32(3.25) != 4) { return 26; }
+    if (round_to_i32(3.5) != 4) { return 27; }
+    if (widen(1.5) != 1.5) { return 28; }
+    if (narrow(2.5) != 2.5) { return 29; }
+
+    if (accumulate(4) != 6.0) { return 30; }
+    if (halve_times(8.0, 3) != 1.0) { return 31; }
+
+    return 0;
+}

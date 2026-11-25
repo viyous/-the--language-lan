@@ -1,0 +1,142 @@
+define first_of_four(s: uint8[..] · {len: {4}}) -> uint8 {
+    return s[0];
+}
+
+define last_of_four(s: uint8[..] · {len: {4}}) -> uint8 {
+    return s[3];
+}
+
+define sum_of_four(s: uint8[..] · {len: {4}}) -> uint32 {
+    return (s[0] as uint32) + (s[1] as uint32) + (s[2] as uint32) + (s[3] as uint32);
+}
+
+define length_of(s: uint8[..]) -> uint32 {
+    return s.len as uint32;
+}
+
+define at(s: uint8[..] · {len: {4}}, i: uint8[0, 3]) -> uint8 {
+    return s[i];
+}
+
+define put(s: uint8[..] · {len: {4}}, i: uint8[0, 3], v: uint8) -> void {
+    s[i] = v;
+}
+
+define as_slice(a: uint8[4]) -> uint8 {
+    define s: uint8[..] · {len: {4}} = a;
+    return s[2];
+}
+
+define from_slice(s: uint8[..] · {len: {4}}) -> uint32 {
+    define a: uint8[4];
+    a[0] = s[0];
+    a[1] = s[1];
+    a[2] = s[2];
+    a[3] = s[3];
+    return (a[0] as uint32) + (a[3] as uint32);
+}
+
+define first_half(s: uint8[..] · {len: {8}}) -> uint8 {
+    define head = s[0, 4);
+    return head[0];
+}
+
+define second_half(s: uint8[..] · {len: {8}}) -> uint8 {
+    define tail = s[4, 8);
+    return tail[0];
+}
+
+define window(s: uint8[..] · {len: {8}}, i: uint8[0, 4]) -> uint8 {
+    define part = s[i, i + 4);
+    return part[0];
+}
+
+define sum_range(s: uint8[..] · {len: {8}}, i: uint8[0, 4]) -> uint32 {
+    define part = s[i, i + 4);
+    return (part[0] as uint32) + (part[1] as uint32) + (part[2] as uint32) + (part[3] as uint32);
+}
+
+define sum_all(s: uint8[..] · {len: {8}}) -> uint32 {
+    define total: uint32 = 0;
+    define i: uint32 = 0;
+    while (i < 8 && total < 1000000) {
+        total += s[i] as uint32;
+        i += 1;
+    }
+    return total;
+}
+
+define count_eq(s: uint8[..] · {len: {8}}, target: uint8) -> uint8[0, 8] {
+    define total: uint8 = 0;
+    define i: uint32 = 0;
+    while (i < 8 && total < 8) {
+        if (s[i] == target) {
+            total += 1;
+        }
+        i += 1;
+    }
+    return total;
+}
+
+define fill_all(s: uint8[..] · {len: {8}}, v: uint8) -> void {
+    define i: uint32 = 0;
+    while (i < 8) {
+        s[i] = v;
+        i += 1;
+    }
+}
+
+define row_of(m: uint8[4][3], r: uint8[0, 2]) -> uint8 {
+    define row = m[r][0, 4);
+    return row[0];
+}
+
+define row_sum_of(m: uint8[4][3], r: uint8[0, 2]) -> uint32 {
+    define row = m[r][0, 4);
+    return (row[0] as uint32) + (row[1] as uint32) + (row[2] as uint32) + (row[3] as uint32);
+}
+
+define main() -> int32 {
+    define a: uint8[4] = [10, 20, 30, 40];
+    define s: uint8[..] · {len: {4}} = a;
+
+    if (first_of_four(s) != 10) { return 1; }
+    if (last_of_four(s) != 40) { return 2; }
+    if (sum_of_four(s) != 100) { return 3; }
+    if (length_of(s) != 4) { return 4; }
+    if (at(s, 1) != 20) { return 5; }
+
+    put(s, 0, 99);
+    if (a[0] != 99) { return 6; }
+
+    if (as_slice(a) != 30) { return 7; }
+    if (from_slice(s) != 139) { return 8; }
+
+    define big: uint8[8] = [1, 2, 3, 4, 5, 6, 7, 8];
+    define bs: uint8[..] · {len: {8}} = big;
+
+    if (first_half(bs) != 1) { return 9; }
+    if (second_half(bs) != 5) { return 10; }
+    if (window(bs, 0) != 1) { return 11; }
+    if (window(bs, 4) != 5) { return 12; }
+    if (sum_range(bs, 0) != 10) { return 13; }
+    if (sum_range(bs, 4) != 26) { return 14; }
+
+    if (sum_all(bs) != 36) { return 15; }
+    if (count_eq(bs, 5) != 1) { return 16; }
+    if (count_eq(bs, 100) != 0) { return 17; }
+
+    fill_all(bs, 3);
+    if (big[0] != 3 || big[7] != 3) { return 18; }
+    if (sum_all(bs) != 24) { return 19; }
+
+    define m: uint8[4][3];
+    m[1][0] = 7;
+    m[1][1] = 8;
+    m[1][2] = 9;
+    m[1][3] = 10;
+    if (row_of(m, 1) != 7) { return 20; }
+    if (row_sum_of(m, 1) != 34) { return 21; }
+
+    return 0;
+}

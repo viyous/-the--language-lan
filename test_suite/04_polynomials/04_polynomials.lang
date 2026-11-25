@@ -1,0 +1,135 @@
+type Even = uint32 & poly(2*n);
+
+type Odd = uint32 & poly(2*n + 1);
+
+type Square = uint64 & poly(n*n);
+
+type Triangle = uint64 & poly(n*(n + 1)/2);
+
+type CubeShifted = int64 & poly((n - 4)*(n - 4)*(n - 4));
+
+type PositiveEven = uint32 & (>= 2) & poly(2*n);
+
+type OneAboveSquare = uint64 & (>= 2) & poly(n*n + 1);
+
+define is_even(x: uint32) -> boolean {
+    return x in Even;
+}
+
+define is_odd(x: uint32) -> boolean {
+    return x in Odd;
+}
+
+define is_square(x: uint64) -> boolean {
+    return x in Square;
+}
+
+define is_triangle(x: uint64) -> boolean {
+    return x in Triangle;
+}
+
+define is_shifted_cube(x: int64) -> boolean {
+    return x in CubeShifted;
+}
+
+define halve(x: Even) -> uint32 {
+    return x / 2;
+}
+
+define double_it(x: uint32[0, 2147483647]) -> Even {
+    return x * 2;
+}
+
+define make_odd(x: Even) -> Odd {
+    return x + 1;
+}
+
+define make_even(x: Odd) -> Even {
+    return x - 1;
+}
+
+define quadruple(x: uint32[0, 1000000000] & poly(2*n)) -> uint32 & poly(8*n) {
+    return x * 4;
+}
+
+define disjoint(a: Square, b: OneAboveSquare) -> uint8[0, 0] {
+    if (a == b) {
+        return 1;
+    }
+    return 0;
+}
+
+define never_equal(a: PositiveEven, b: Odd) -> boolean {
+    if (a == b) {
+        return true;
+    }
+    return false;
+}
+
+define probe_large(x: uint32) -> uint8 {
+    if (is_even(4294967294)) { return 1; }
+    if (is_odd(4294967295)) { return 2; }
+    if (is_even(x)) { return 3; }
+    return 4;
+}
+
+define probe_triangle() -> boolean {
+    return is_triangle(9223372034707292160);
+}
+
+define evens_below(n: uint32[0, 1000]) -> uint32 {
+    define x: uint32 = 0;
+    while (x < n) {
+        x += 2;
+    }
+    return x;
+}
+
+define triangle_sum(k: uint8[0, 20]) -> uint32 {
+    define i: uint8 = 0;
+    define acc: uint32 = 0;
+    while (i < k && acc < 100000) {
+        acc += (i as uint32) * ((i as uint32) + 1) / 2;
+        i += 1;
+    }
+    return acc;
+}
+
+define main() -> int32 {
+    if (!is_even(0)) { return 1; }
+    if (!is_even(100)) { return 2; }
+    if (is_even(101)) { return 3; }
+
+    if (!is_odd(1)) { return 4; }
+    if (!is_odd(99)) { return 5; }
+    if (is_odd(100)) { return 6; }
+
+    if (!is_square(0)) { return 7; }
+    if (!is_square(144)) { return 8; }
+    if (is_square(145)) { return 9; }
+
+    if (!is_triangle(0)) { return 10; }
+    if (!is_triangle(10)) { return 11; }
+    if (is_triangle(11)) { return 12; }
+
+    if (!is_shifted_cube(0)) { return 13; }
+    if (!is_shifted_cube(27)) { return 14; }
+    if (is_shifted_cube(2)) { return 15; }
+
+    if (halve(100) != 50) { return 16; }
+    if (double_it(21) != 42) { return 17; }
+    if (make_odd(100) != 101) { return 18; }
+    if (make_even(101) != 100) { return 19; }
+    if (quadruple(24) != 96) { return 20; }
+
+    if (disjoint(4, 5) != 0) { return 21; }
+    if (never_equal(2, 3)) { return 22; }
+
+    if (probe_large(7) != 1) { return 23; }
+    if (!probe_triangle()) { return 24; }
+
+    if (evens_below(10) != 10) { return 25; }
+    if (triangle_sum(5) != 20) { return 26; }
+
+    return 0;
+}

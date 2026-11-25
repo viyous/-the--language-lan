@@ -1,0 +1,134 @@
+define countdown(n: uint8) -> uint8 {
+    if (n == 0) { return 0; }
+    return (countdown(n - 1) + 1) as: sat uint8;
+}
+
+define factorial(n: uint8[0, 12]) -> uint32 {
+    if (n == 0) { return 1; }
+    return ((n as uint32) * factorial(n - 1)) as: sat uint32;
+}
+
+define fib(n: uint8[0, 20]) -> uint32 {
+    if (n < 2) { return n as uint32; }
+    return (fib(n - 1) + fib(n - 2)) as: sat uint32;
+}
+
+define power(base: uint32, exp: uint8[0, 16]) -> uint32 {
+    if (exp == 0) { return 1; }
+    return (base * power(base, exp - 1)) as: sat uint32;
+}
+
+define is_even(n: uint8) -> boolean {
+    if (n == 0) { return true; }
+    return is_odd(n - 1);
+}
+
+define is_odd(n: uint8) -> boolean {
+    if (n == 0) { return false; }
+    return is_even(n - 1);
+}
+
+define identity_rec(n: uint8) -> uint8 & >= n & <= n {
+    if (n == 0) { return 0; }
+    n -= 1;
+    return identity_rec(n) + 1;
+}
+
+define sum_acc(n: uint8, acc: uint32) -> uint32 {
+    if (n == 0) { return acc; }
+    return sum_acc(n - 1, (acc + (n as uint32)) as: sat uint32);
+}
+
+define sum(n: uint8) -> uint32 {
+    return sum_acc(n, 0);
+}
+
+define gcd(a: uint32, b: uint32) -> uint32 {
+    if (b == 0) { return a; }
+    return gcd(b, a % b);
+}
+
+define reverse_digits(n: uint32, acc: uint32) -> uint32 {
+    if (n == 0) { return acc; }
+    return reverse_digits(n / 10, (acc * 10 + (n % 10)) as: sat uint32);
+}
+
+define nested(n: uint8[0, 10]) -> uint32 {
+    if (n == 0) { return 0; }
+    define local: uint32 = 0;
+    define i: uint8 = 0;
+    while (i < 3 && local < 1000) {
+        local += 1;
+        i += 1;
+    }
+    return (local + nested(n - 1)) as: sat uint32;
+}
+
+define array_sum(a: uint8[8], n: uint8[0, 8]) -> uint32 {
+    if (n == 0) { return 0; }
+    return ((a[n - 1] as uint32) + array_sum(a, n - 1)) as: sat uint32;
+}
+
+define is_sorted(a: uint8[8], n: uint8[1, 8]) -> boolean {
+    if (n <= 1) { return true; }
+    if (a[n - 2] > a[n - 1]) { return false; }
+    return is_sorted(a, n - 1);
+}
+
+define main() -> int32 {
+
+    if (countdown(0) != 0) { return 1; }
+    if (countdown(100) != 100) { return 2; }
+    if (countdown(255) != 255) { return 3; }
+
+    if (factorial(0) != 1) { return 4; }
+    if (factorial(5) != 120) { return 5; }
+    if (factorial(12) != 479001600) { return 6; }
+
+    if (fib(0) != 0) { return 7; }
+    if (fib(1) != 1) { return 8; }
+    if (fib(10) != 55) { return 9; }
+    if (fib(20) != 6765) { return 10; }
+
+    if (power(2, 0) != 1) { return 11; }
+    if (power(2, 10) != 1024) { return 12; }
+    if (power(3, 5) != 243) { return 13; }
+
+    if (!is_even(0)) { return 14; }
+    if (is_even(1)) { return 15; }
+    if (!is_even(100)) { return 16; }
+    if (!is_odd(99)) { return 17; }
+    if (is_odd(100)) { return 18; }
+
+    if (identity_rec(0) != 0) { return 19; }
+    if (identity_rec(42) != 42) { return 20; }
+    if (identity_rec(255) != 255) { return 21; }
+
+    if (sum(0) != 0) { return 22; }
+    if (sum(10) != 55) { return 23; }
+    if (sum(100) != 5050) { return 24; }
+
+    if (gcd(12, 8) != 4) { return 25; }
+    if (gcd(100, 75) != 25) { return 26; }
+    if (gcd(7, 0) != 7) { return 27; }
+    if (gcd(17, 5) != 1) { return 28; }
+
+    if (reverse_digits(1234, 0) != 4321) { return 29; }
+    if (reverse_digits(1000, 0) != 1) { return 30; }
+    if (reverse_digits(7, 0) != 7) { return 31; }
+
+    if (nested(0) != 0) { return 32; }
+    if (nested(5) != 15) { return 33; }
+
+    define data: uint8[8] = [1, 2, 3, 4, 5, 6, 7, 8];
+    if (array_sum(data, 0) != 0) { return 34; }
+    if (array_sum(data, 8) != 36) { return 35; }
+    if (array_sum(data, 4) != 10) { return 36; }
+
+    if (!is_sorted(data, 8)) { return 37; }
+
+    define unsorted: uint8[8] = [1, 2, 9, 4, 5, 6, 7, 8];
+    if (is_sorted(unsorted, 8)) { return 38; }
+
+    return 0;
+}

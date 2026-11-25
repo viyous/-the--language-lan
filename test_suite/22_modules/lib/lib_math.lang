@@ -1,0 +1,33 @@
+type Small = uint8[0, 100];
+type Ratio = uint16[0, 1000];
+
+define clamp100(x: int32) -> Small {
+    if (x < 0) { return 0; }
+    if (x > 100) { return 100; }
+    return x as: sat uint8;
+}
+
+define add_small(a: Small, b: Small) -> uint16[0, 200] {
+    return (a as uint16) + (b as uint16);
+}
+
+define sat_sub(a: Small, b: Small) -> Small {
+    if (a <= b) { return 0; }
+    define d: uint16 = (a as uint16) - (b as uint16);
+    return d as uint8;
+}
+
+define half(x: uint32) -> uint32 {
+    return x / 2;
+}
+
+define is_even(x: uint32) -> boolean {
+    return x % 2 == 0;
+}
+
+define scale(a: Small, k: uint8[0, 10]) -> Ratio {
+    define p: uint32 = (a as uint32) * (k as uint32);
+    return p as uint16;
+}
+
+export { Small, Ratio, clamp100, add_small, sat_sub, half, is_even, scale };

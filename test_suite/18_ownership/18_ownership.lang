@@ -1,0 +1,153 @@
+define move_scalar() -> uint8[7, 7] {
+    define old: uint8 · {storage: heap} = 7;
+    define owner: uint8 · {storage: heap} = old;
+    define result = owner;
+    free(owner);
+    return result;
+}
+
+define read_then_free(v: uint8) -> uint8 {
+    define cell: uint8 · {storage: heap} = v;
+    define copy = cell;
+    free(cell);
+    return copy;
+}
+
+define move_array() -> uint8[7, 7] {
+    define old: uint8[4] · {storage: heap};
+    old[2] = 7;
+    define owner: uint8[..] · {len: {4}} · {storage: heap} = old;
+    define result = owner[2];
+    free(owner);
+    return result;
+}
+
+define array_roundtrip() -> uint16 {
+    define a: uint8[4] · {storage: heap};
+    a[0] = 1;
+    a[1] = 2;
+    a[2] = 3;
+    a[3] = 4;
+    define total: uint16 = (a[0] as uint16) + (a[1] as uint16) + (a[2] as uint16) + (a[3] as uint16);
+    free(a);
+    return total;
+}
+
+define move_packed() -> uint8[1, 1] {
+    define old: bit[8] · {storage: heap} = [1; 8];
+    define owner: bit[8] · {storage: heap} = old;
+    define result = 0;
+    if (owner[0] == 1) { result = 1; }
+    free(owner);
+    return result;
+}
+
+type Node = { value: uint8, next: Node | null };
+
+define move_record() -> uint8[7, 7] {
+    define child: Node = { value: 7 };
+    define old: Node · {storage: heap} = { next: child };
+    define owner: Node · {storage: heap} = old;
+    define result = owner.next.value;
+    free(owner);
+    return result;
+}
+
+define record_roundtrip() -> uint8 {
+    define r: Node · {storage: heap} = { value: 42 };
+    define v = r.value;
+    r.value = 99;
+    define w = r.value;
+    free(r);
+    return v;
+}
+
+define refill() -> uint8[7, 7] {
+    define slot: uint8 · {storage: heap} = 1;
+    define old_view: uint8 · {pass: alias} = slot;
+    free(slot);
+    define replacement: uint8 · {storage: heap} = 7;
+    slot = replacement;
+    define result = slot;
+    free(slot);
+    return result;
+}
+
+define refill_array() -> uint8 {
+    define slot: uint8[2] · {storage: heap};
+    slot[0] = 1;
+    free(slot);
+    define fresh: uint8[2] · {storage: heap};
+    fresh[0] = 9;
+    slot = fresh;
+    define result = slot[0];
+    free(slot);
+    return result;
+}
+
+define drop: contract(cell: uint8 · {storage: heap}) -> uint8 (cell) {
+    define value = cell;
+    free(cell);
+    return value;
+}
+
+define caller: contract() -> uint8 () {
+    define owner: uint8 · {storage: heap} = 7;
+    return drop(owner);
+}
+
+define drop_array: contract(items: uint8[..] · {len: {4}} · {storage: heap}) -> uint8 (items) {
+    define value = items[1];
+    free(items);
+    return value;
+}
+
+define caller_array: contract() -> uint8 () {
+    define owner: uint8[4] · {storage: heap};
+    owner[1] = 9;
+    return drop_array(owner);
+}
+
+type Pair = { left: uint8, right: uint16 };
+
+define drop_pair: contract(pair: Pair · {storage: heap}) -> uint8 (pair) {
+    define value = pair.left;
+    free(pair);
+    return value;
+}
+
+define caller_pair: contract() -> uint8 () {
+    define owner: Pair · {storage: heap} = { left: 3, right: 4 };
+    return drop_pair(owner);
+}
+
+define make_chain(n: uint8) -> uint8 · {storage: heap} {
+    if (n != 0) {
+        return make_chain(n - 1);
+    }
+    define value: uint8 · {storage: heap} = 7;
+    return value;
+}
+
+define main() -> int32 {
+    if (move_scalar() != 7) { return 1; }
+    if (read_then_free(42) != 42) { return 2; }
+    if (move_array() != 7) { return 3; }
+    if (array_roundtrip() != 10) { return 4; }
+    if (move_packed() != 1) { return 5; }
+    if (move_record() != 7) { return 6; }
+    if (record_roundtrip() != 42) { return 7; }
+    if (refill() != 7) { return 8; }
+    if (refill_array() != 9) { return 9; }
+
+    if (caller() != 7) { return 10; }
+    if (caller_array() != 9) { return 11; }
+    if (caller_pair() != 3) { return 12; }
+
+    define chain: uint8 · {storage: heap} = make_chain(5);
+    define chain_value = chain;
+    free(chain);
+    if (chain_value != 7) { return 13; }
+
+    return 0;
+}

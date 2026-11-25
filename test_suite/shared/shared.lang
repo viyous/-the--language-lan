@@ -1,0 +1,120 @@
+type Vec2 = { x: int32, y: int32 };
+type Vec3 = { x: int32, y: int32, z: int32 };
+type Rgb = { r: uint8, g: uint8, b: uint8 };
+type Span = { lo: uint16, hi: uint16 };
+
+type Actor = {
+    id: uint32,
+    name_hash: uint32,
+    level: uint8,
+    health: uint16,
+    health_max: uint16,
+    mana: uint16,
+    mana_max: uint16,
+    stamina: uint16,
+    stamina_max: uint16,
+    armor: uint16,
+    armor_max: uint16,
+    attack: uint16,
+    defense: uint16,
+    speed: uint16,
+    accuracy: uint16,
+    evasion: uint16,
+    crit_rate: uint8,
+    crit_bonus: uint16,
+    fire_resist: uint8,
+    ice_resist: uint8,
+    shock_resist: uint8,
+    poison_resist: uint8,
+    holy_resist: uint8,
+    dark_resist: uint8,
+    gold: uint32,
+    experience: uint32,
+    kills: uint16,
+    deaths: uint16,
+    alive: boolean,
+    stunned: boolean,
+    poisoned: boolean,
+    position: Vec3
+};
+
+type Frame = {
+    version: uint8,
+    kind: uint8,
+    flags: bit[8],
+    sequence: uint16,
+    checksum: uint32,
+    source: uint32,
+    target: uint32,
+    payload_len: uint8,
+    payload: uint8[16],
+    trailer: bit[16],
+    compressed: boolean,
+    encrypted: boolean
+};
+
+type Matrix4 = {
+    m00: int32, m01: int32, m02: int32, m03: int32,
+    m10: int32, m11: int32, m12: int32, m13: int32,
+    m20: int32, m21: int32, m22: int32, m23: int32,
+    m30: int32, m31: int32, m32: int32, m33: int32
+};
+
+type ItemSlot = {
+    item_id: uint16,
+    count: uint8,
+    durability: uint8,
+    bound: boolean
+};
+
+type Inventory = {
+    owner: uint32,
+    capacity: uint8,
+    used: uint8,
+    slots: ItemSlot[8],
+    gold: uint32,
+    locked: boolean
+};
+
+type Camera = {
+    eye: Vec3,
+    look: Vec3,
+    up: Vec3,
+    fov: uint16,
+    near_plane: uint16,
+    far_plane: uint32
+};
+
+type Light = {
+    position: Vec3,
+    color: Rgb,
+    intensity: uint8,
+    enabled: boolean
+};
+
+type Scene = {
+    camera: Camera,
+    key_light: Light,
+    fill_light: Light,
+    ambient: Rgb,
+    actor_count: uint8,
+    visible: boolean
+};
+
+enum Element: uint8 { Physical = 1, Fire, Ice, Shock, Poison, Holy, Dark };
+enum SlotKind: uint8 { Empty = 0, Weapon, Armor, Consumable, Quest };
+enum Direction: int8 { North = -2, East, South, West };
+
+type Health = uint16[0, 65535];
+type Percentage = uint8[0, 100];
+type Level = uint8[1, 99];
+type Gold = uint32 & poly(1*n);
+type EvenIndex = uint8 & poly(2*n);
+
+export {
+    Vec2, Vec3, Rgb, Span,
+    Actor, Frame, Matrix4, Inventory, ItemSlot,
+    Camera, Light, Scene,
+    Element, SlotKind, Direction,
+    Health, Percentage, Level, Gold, EvenIndex
+};

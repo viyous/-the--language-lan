@@ -1,0 +1,102 @@
+define identity(x: uint8) -> uint8 property: forall(x) => result == x {
+    return x;
+}
+
+define identity16(x: uint16) -> uint16 property: forall(x) => result == x {
+    return x;
+}
+
+define clamp100(x: uint8) -> uint8 property: forall(x) => clamp100(clamp100(x)) == clamp100(x) {
+    if (x > 100) { return 100; }
+    return x;
+}
+
+define zero_out(x: uint8) -> uint8 property: forall(x) => zero_out(zero_out(x)) == zero_out(x) {
+    return 0;
+}
+
+define mask_low4(x: uint8) -> uint8 property: forall(x) => mask_low4(mask_low4(x)) == mask_low4(x) {
+    return x & 15;
+}
+
+define add_small(x: uint8[0, 100], y: uint8[0, 100]) -> uint8
+    property: forall(x, y) => add_small(x, y) == add_small(y, x) {
+    return x + y;
+}
+
+define min_of(x: uint8, y: uint8) -> uint8
+    property: forall(x, y) => min_of(x, y) == min_of(y, x) {
+    if (x < y) { return x; }
+    return y;
+}
+
+define max_of(x: uint8, y: uint8) -> uint8
+    property: forall(x, y) => max_of(x, y) == max_of(y, x) {
+    if (x > y) { return x; }
+    return y;
+}
+
+define xor_of(x: uint8, y: uint8) -> uint8
+    property: forall(x, y) => xor_of(x, y) == xor_of(y, x) {
+    return x ^ y;
+}
+
+define and_of(x: uint8, y: uint8) -> uint8
+    property: forall(x, y) => and_of(x, y) == and_of(y, x) {
+    return x & y;
+}
+
+define pick_first(x: uint8, y: uint8) -> uint8
+    property: forall(x) => pick_first(x, x) == x {
+    return y;
+}
+
+define pick_second(x: uint8, y: uint8) -> uint8
+    property: forall(x) => pick_second(x, x) == x {
+    return x;
+}
+
+define add3(a: uint8[0, 50], b: uint8[0, 50], c: uint8[0, 50]) -> uint8[0, 150] {
+    return a + b + c;
+}
+
+define sat_add(a: uint8, b: uint8) -> uint8 {
+    return (a + b) as: sat uint8;
+}
+
+define main() -> int32 {
+
+    if (identity(0) != 0) { return 1; }
+    if (identity(255) != 255) { return 2; }
+    if (identity16(65535) != 65535) { return 3; }
+
+    if (clamp100(200) != 100) { return 4; }
+    if (clamp100(50) != 50) { return 5; }
+    if (clamp100(clamp100(200)) != 100) { return 6; }
+
+    if (zero_out(99) != 0) { return 7; }
+
+    if (mask_low4(0x1F) != 0x0F) { return 8; }
+    if (mask_low4(0x0A) != 0x0A) { return 9; }
+    if (mask_low4(mask_low4(0x1F)) != 0x0F) { return 10; }
+
+    if (add_small(30, 40) != 70) { return 11; }
+    if (add_small(40, 30) != 70) { return 12; }
+    if (min_of(3, 9) != 3) { return 13; }
+    if (min_of(9, 3) != 3) { return 14; }
+    if (max_of(3, 9) != 9) { return 15; }
+    if (max_of(9, 3) != 9) { return 16; }
+    if (xor_of(0x0F, 0xF0) != 0xFF) { return 17; }
+    if (and_of(0x0F, 0x03) != 0x03) { return 18; }
+
+    if (pick_first(7, 7) != 7) { return 19; }
+    if (pick_first(7, 8) != 8) { return 20; }
+    if (pick_second(7, 7) != 7) { return 21; }
+    if (pick_second(7, 8) != 7) { return 22; }
+
+    if (add3(50, 50, 50) != 150) { return 23; }
+    if (sat_add(200, 100) != 255) { return 24; }
+    if (sat_add(10, 20) != 30) { return 25; }
+
+    return 0;
+}

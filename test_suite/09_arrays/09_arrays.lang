@@ -1,0 +1,173 @@
+define make_list() -> uint8 {
+    define a: uint8[4] = [1, 2, 3, 4];
+    return a[2];
+}
+
+define make_repeat() -> uint8 {
+    define a: uint8[8] = [7; 8];
+    return a[7];
+}
+
+define make_zero() -> uint8 {
+    define a: uint8[4];
+    return a[0];
+}
+
+define read_at(a: uint8[4], i: uint8[0, 3]) -> uint8 {
+    return a[i];
+}
+
+define write_at(a: uint8[4], i: uint8[0, 3], v: uint8) -> void {
+    a[i] = v;
+}
+
+define length(a: uint8[4]) -> uint32 {
+    return a.len as uint32;
+}
+
+define sum4(a: uint8[4]) -> uint32 {
+    return (a[0] as uint32) + (a[1] as uint32) + (a[2] as uint32) + (a[3] as uint32);
+}
+
+define sum_loop(a: uint8[4]) -> uint32 {
+    define total: uint32 = 0;
+    define i: uint8 = 0;
+    while (i < 4 && total < 1000000) {
+        total += a[i] as uint32;
+        i += 1;
+    }
+    return total;
+}
+
+define max4(a: uint8[4]) -> uint8 {
+    define best: uint8 = a[0];
+    define i: uint8 = 1;
+    while (i < 4) {
+        if (a[i] > best) {
+            best = a[i];
+        }
+        i += 1;
+    }
+    return best;
+}
+
+define reverse4(a: uint8[4]) -> void {
+    define tmp: uint8 = a[0];
+    a[0] = a[3];
+    a[3] = tmp;
+    tmp = a[1];
+    a[1] = a[2];
+    a[2] = tmp;
+}
+
+define matrix_set(m: uint8[4][3], i: uint8[0, 2], j: uint8[0, 3], v: uint8) -> void {
+    m[i][j] = v;
+}
+
+define matrix_get(m: uint8[4][3], i: uint8[0, 2], j: uint8[0, 3]) -> uint8 {
+    return m[i][j];
+}
+
+define row_sum(m: uint8[4][3], i: uint8[0, 2]) -> uint32 {
+    return (m[i][0] as uint32) + (m[i][1] as uint32) + (m[i][2] as uint32) + (m[i][3] as uint32);
+}
+
+define copy_row(m: uint8[4][3], src: uint8[0, 2], dst: uint8[0, 2]) -> void {
+    m[dst][0, 4) = m[src][0, 4) as: copy;
+}
+
+define identity(m: uint8[4][4]) -> void {
+    define i: uint8 = 0;
+    while (i < 4) {
+        m[i][i] = 1;
+        i += 1;
+    }
+}
+
+type Cell = { tag: uint8, weight: uint16 };
+
+define total_weight(cells: Cell[4]) -> uint32 {
+    return (cells[0].weight as uint32) + (cells[1].weight as uint32)
+         + (cells[2].weight as uint32) + (cells[3].weight as uint32);
+}
+
+define find_tag(cells: Cell[4], tag: uint8) -> uint16 {
+    define i: uint8 = 0;
+    while (i < 4) {
+        if (cells[i].tag == tag) {
+            return cells[i].weight;
+        }
+        i += 1;
+    }
+    return 0;
+}
+
+define retag(cells: Cell[4], i: uint8[0, 3], tag: uint8) -> void {
+    cells[i].tag = tag;
+}
+
+define fill(a: uint8[4], v: uint8) -> void {
+    a[0] = v;
+    a[1] = v;
+    a[2] = v;
+    a[3] = v;
+}
+
+define fill_copy(a: uint8[4] · {pass: copy}, v: uint8) -> uint8 {
+    a[0] = v;
+    return a[0];
+}
+
+define main() -> int32 {
+    if (make_list() != 3) { return 1; }
+    if (make_repeat() != 7) { return 2; }
+    if (make_zero() != 0) { return 3; }
+
+    define a: uint8[4] = [1, 2, 3, 4];
+    if (read_at(a, 2) != 3) { return 4; }
+    if (length(a) != 4) { return 5; }
+    if (sum4(a) != 10) { return 6; }
+    if (sum_loop(a) != 10) { return 7; }
+    if (max4(a) != 4) { return 8; }
+
+    write_at(a, 0, 9);
+    if (a[0] != 9) { return 9; }
+
+    reverse4(a);
+    if (a[0] != 4 || a[3] != 9) { return 10; }
+
+    define m: uint8[4][3];
+    matrix_set(m, 1, 2, 5);
+    if (matrix_get(m, 1, 2) != 5) { return 11; }
+    if (row_sum(m, 1) != 5) { return 12; }
+
+    copy_row(m, 1, 2);
+    if (m[2][2] != 5) { return 13; }
+
+    define id: uint8[4][4];
+    identity(id);
+    if (id[0][0] != 1 || id[1][1] != 1 || id[2][2] != 1 || id[3][3] != 1) { return 14; }
+    if (id[0][1] != 0) { return 15; }
+
+    define cells: Cell[4] = [
+        { tag: 1, weight: 10 },
+        { tag: 2, weight: 20 },
+        { tag: 3, weight: 30 },
+        { tag: 4, weight: 40 }
+    ];
+    if (total_weight(cells) != 100) { return 16; }
+    if (find_tag(cells, 3) != 30) { return 17; }
+    if (find_tag(cells, 9) != 0) { return 18; }
+
+    retag(cells, 0, 9);
+    if (cells[0].tag != 9) { return 19; }
+
+    define b: uint8[4];
+    fill(b, 6);
+    if (b[0] != 6 || b[3] != 6) { return 20; }
+
+    if (fill_copy(b, 1) != 1) { return 21; }
+    if (b[0] != 6) { return 22; }
+
+    return 0;
+}

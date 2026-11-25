@@ -1,0 +1,193 @@
+type Handle = uint32[1, 4294967295];
+type Phase = uint16[0, 7199];
+enum Slot: uint8 { Helmet, Chest, Leggings, Boots, Necklace, Ring, Pendant, Hand, Wings, Core, None };
+enum Bucket: uint8 { Attacked, Tick, StaticEffect, HealthChange, Attack };
+
+// The host maps handles to JS values and dispatches the UI continuations.
+// These calls act on host state. They receive no borrowed Lan storage.
+extern contract host_catalog_slot(item_id: Handle) -> Slot writes { memory };
+extern contract host_online_equipment(player: Handle) -> Handle writes { memory };
+extern contract host_equipment_slot(equipment: Handle, slot: Slot) -> Handle writes { memory };
+extern contract host_has_key(slot_object: Handle, item: Handle) -> boolean writes { memory };
+extern contract host_write_key(slot_object: Handle, item: Handle, active: boolean) -> void writes { memory };
+extern contract host_clear_mainhand(player: Handle) -> void writes { memory };
+extern contract host_say(player: Handle, text: string) -> void writes { memory };
+extern contract host_set_equipment(player: Handle, equipment: Handle) -> void writes { memory };
+extern contract host_is_management_item(item_id: Handle) -> boolean writes { memory };
+extern contract host_show_slots(player: Handle) -> void writes { memory };
+extern contract host_show_slot_modal(player: Handle, slot: Slot, equipment: Handle, slot_object: Handle) -> void writes { memory };
+extern contract host_emit_equipment_change(player: Handle, equipment: Handle) -> void writes { memory };
+
+// Each iterator returns zero at exhaustion. The host preserves the original
+// JS enumeration order, including the order within each equipment slot.
+extern contract host_online_iterator() -> Handle writes { memory };
+extern contract host_equipment_iterator(equipment: Handle) -> Handle writes { memory };
+extern contract host_effect_state(player: Handle) -> Handle writes { memory };
+extern contract host_online_entry_effects(entry: Handle) -> Handle writes { memory };
+extern contract host_effect_iterator(effects: Handle, bucket: Bucket) -> Handle writes { memory };
+extern contract host_next(iterator: Handle) -> uint32 writes { memory };
+extern contract host_close(iterator: Handle) -> void writes { memory };
+extern contract host_entry_item(entry: Handle) -> Handle writes { memory };
+extern contract host_entry_active(entry: Handle) -> boolean writes { memory };
+extern contract host_clear_bucket(effects: Handle, bucket: Bucket) -> void writes { memory };
+extern contract host_append_catalog_bucket(effects: Handle, item: Handle, bucket: Bucket) -> void writes { memory };
+extern contract host_catalog_enable(item: Handle) -> uint32 writes { memory };
+extern contract host_enable_not_error(hook: Handle, player: Handle) -> void writes { memory };
+extern contract host_run_effect(player: Handle, effect: Handle) -> void writes { memory };
+extern contract host_phase() -> Phase writes { memory };
+extern contract host_set_phase(phase: Phase) -> void writes { memory };
+extern contract host_tick_not_error(hook: Handle, online_entry: Handle, phase: Phase) -> void writes { memory };
+extern contract host_attacked_not_error(hook: Handle, player: Handle, entity: Handle, damage: float64) -> void writes { memory };
+extern contract host_is_player(entity: Handle) -> boolean writes { memory };
+extern contract host_health_not_error(hook: Handle, old_value: float64, new_value: float64, entity: Handle) -> void writes { memory };
+extern contract host_attack_not_error(hook: Handle, player: Handle, entity: Handle, item: uint32) -> void writes { memory };
+
+define on_record_item(item_id: Handle, player: Handle) -> void {
+    define slot = host_catalog_slot(item_id);
+    if (slot == Slot.None) { return; }
+    define equipment = host_online_equipment(player);
+    define slot_object = host_equipment_slot(equipment, slot);
+    if (host_has_key(slot_object, item_id)) {
+        host_say(player, "已装备");
+        return;
+    }
+    host_write_key(slot_object, item_id, false);
+    host_clear_mainhand(player);
+    host_say(player, "记录成功");
+    host_set_equipment(player, equipment);
+}
+
+define on_open_management(item_id: Handle, player: Handle) -> void {
+    if (host_is_management_item(item_id)) { host_show_slots(player); }
+}
+
+define on_slot_choice(player: Handle, slot: Slot) -> void {
+    if (slot == Slot.None) { return; }
+    define equipment = host_online_equipment(player);
+    define slot_object = host_equipment_slot(equipment, slot);
+    // Render the slot's keys with the catalog names and current defaults.
+    // The continuation retains these two exact JS objects across the wait.
+    host_show_slot_modal(player, slot, equipment, slot_object);
+}
+
+define main_slot(slot: Slot) -> boolean {
+    return slot == Slot.Helmet || slot == Slot.Chest || slot == Slot.Leggings ||
+           slot == Slot.Boots || slot == Slot.Core;
+}
+
+// keys and picks are parallel arrays from the reply's own key enumeration.
+define on_modal_reply(player: Handle, slot: Slot, equipment: Handle, slot_object: Handle,
+                      keys: Handle[..], picks: boolean[..]) -> boolean {
+    if (slot == Slot.None || keys.len != picks.len) { return false; }
+    define limited = main_slot(slot);
+    define accepted = false;
+    define i: uint32 = 0;
+    while (i < keys.len) {
+        define active = picks[i];
+        if (limited && active) {
+            if (accepted) { active = false; }
+            else { accepted = true; }
+        }
+        host_write_key(slot_object, keys[i], active);
+        i += 1;
+    }
+    host_emit_equipment_change(player, equipment);
+    host_set_equipment(player, equipment);
+    return true;
+}
+
+define apply_static_effects(player: Handle, effects: Handle) -> void {
+    define iterator = host_effect_iterator(effects, Bucket.StaticEffect);
+    define effect = host_next(iterator);
+    while (effect != 0) {
+        host_run_effect(player, effect);
+        effect = host_next(iterator);
+    }
+    host_close(iterator);
+}
+
+define on_spawn(player: Handle) -> void {
+    apply_static_effects(player, host_effect_state(player));
+}
+
+define on_equipment_change(player: Handle, equipment: Handle) -> void {
+    define effects = host_effect_state(player);
+    host_clear_bucket(effects, Bucket.Attacked);
+    host_clear_bucket(effects, Bucket.Tick);
+    host_clear_bucket(effects, Bucket.StaticEffect);
+    host_clear_bucket(effects, Bucket.HealthChange);
+    host_clear_bucket(effects, Bucket.Attack);
+    define iterator = host_equipment_iterator(equipment);
+    define entry = host_next(iterator);
+    while (entry != 0) {
+        if (host_entry_active(entry)) {
+            define item = host_entry_item(entry);
+            host_append_catalog_bucket(effects, item, Bucket.Attacked);
+            host_append_catalog_bucket(effects, item, Bucket.Tick);
+            host_append_catalog_bucket(effects, item, Bucket.StaticEffect);
+            host_append_catalog_bucket(effects, item, Bucket.HealthChange);
+            host_append_catalog_bucket(effects, item, Bucket.Attack);
+            define enable = host_catalog_enable(item);
+            if (enable != 0) { host_enable_not_error(enable, player); }
+        }
+        entry = host_next(iterator);
+    }
+    host_close(iterator);
+    apply_static_effects(player, effects);
+}
+
+define next_phase(phase: Phase) -> Phase {
+    if (phase == 7199) { return 0; }
+    return phase + 1;
+}
+
+define on_timer() -> void {
+    host_set_phase(next_phase(host_phase()));
+    define players = host_online_iterator();
+    define player_entry = host_next(players);
+    while (player_entry != 0) {
+        define ticks = host_effect_iterator(host_online_entry_effects(player_entry), Bucket.Tick);
+        define hook = host_next(ticks);
+        while (hook != 0) {
+            host_tick_not_error(hook, player_entry, host_phase());
+            hook = host_next(ticks);
+        }
+        host_close(ticks);
+        player_entry = host_next(players);
+    }
+    host_close(players);
+}
+
+define on_attacked(player: Handle, entity: Handle, damage: float64) -> void {
+    define iterator = host_effect_iterator(host_effect_state(player), Bucket.Attacked);
+    define hook = host_next(iterator);
+    while (hook != 0) {
+        host_attacked_not_error(hook, player, entity, damage);
+        hook = host_next(iterator);
+    }
+    host_close(iterator);
+}
+
+define on_health_change(entity: Handle, old_value: float64, new_value: float64) -> void {
+    if (!host_is_player(entity)) { return; }
+    define iterator = host_effect_iterator(host_effect_state(entity), Bucket.HealthChange);
+    define hook = host_next(iterator);
+    while (hook != 0) {
+        host_health_not_error(hook, old_value, new_value, entity);
+        hook = host_next(iterator);
+    }
+    host_close(iterator);
+}
+
+define on_attack(player: Handle, entity: Handle, item: uint32) -> void {
+    define iterator = host_effect_iterator(host_effect_state(player), Bucket.Attack);
+    define hook = host_next(iterator);
+    while (hook != 0) {
+        host_attack_not_error(hook, player, entity, item);
+        hook = host_next(iterator);
+    }
+    host_close(iterator);
+}
+
+export { on_record_item, on_open_management, on_slot_choice, on_modal_reply,
+         on_equipment_change, on_spawn, on_timer, on_attacked, on_health_change, on_attack };

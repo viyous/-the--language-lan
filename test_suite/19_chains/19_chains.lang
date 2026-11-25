@@ -1,0 +1,335 @@
+type Node = { value: uint8, next: Node | null };
+
+define build(n: uint8[0, 8]) -> uint8 {
+    define head: Node · {storage: heap} = { value: 0 };
+    define tail: Node · {pass: alias} = head;
+    define i: uint8 = n;
+    while (i > 0) {
+        define node: Node · {storage: heap} = { value: i };
+        tail.next = node;
+        tail = node;
+        i -= 1;
+    }
+    assert chain(head: head -> tail: null);
+    define total = head.value;
+    free(head);
+    return total;
+}
+
+define build_and_count(n: uint8[0, 8]) -> uint8 {
+    define head: Node · {storage: heap} = { value: 0 };
+    define tail: Node · {pass: alias} = head;
+    define count: uint8 = 1;
+    define i: uint8 = n;
+
+    while (i > 0 && count < 9) {
+        define node: Node · {storage: heap} = { value: i };
+        tail.next = node;
+        tail = node;
+        count += 1;
+        i -= 1;
+    }
+    free(head);
+    return count;
+}
+
+define sum_chain(head: Node) -> uint32 {
+    define total: uint32 = 0;
+    define cursor: Node · {pass: alias, immutable: true} = head;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 16 && total < 1000000) {
+        total += cursor.value as uint32;
+        if (cursor.next == null) { walking = false; }
+        else {
+            define nxt: Node · {pass: alias, immutable: true} = cursor.next;
+            cursor = nxt;
+            steps += 1;
+        }
+    }
+    return total;
+}
+
+define count_chain(head: Node) -> uint8 {
+    define count: uint8 = 1;
+    define cursor: Node · {pass: alias, immutable: true} = head;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 16) {
+        if (cursor.next == null) { walking = false; }
+        else {
+            define nxt: Node · {pass: alias, immutable: true} = cursor.next;
+            cursor = nxt;
+            count += 1;
+            steps += 1;
+        }
+    }
+    return count;
+}
+
+define contains(head: Node, target: uint8) -> boolean {
+    define found: boolean = false;
+    define cursor: Node · {pass: alias, immutable: true} = head;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 16) {
+        if (cursor.value == target) {
+            found = true;
+        }
+        if (cursor.next == null) { walking = false; }
+        else {
+            define nxt: Node · {pass: alias, immutable: true} = cursor.next;
+            cursor = nxt;
+            steps += 1;
+        }
+    }
+    return found;
+}
+
+define tail_value(head: Node) -> uint8 {
+    define last: uint8 = head.value;
+    define cursor: Node · {pass: alias, immutable: true} = head;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 16) {
+        last = cursor.value;
+        if (cursor.next == null) { walking = false; }
+        else {
+            define nxt: Node · {pass: alias, immutable: true} = cursor.next;
+            cursor = nxt;
+            steps += 1;
+        }
+    }
+    return last;
+}
+
+define second_value(head: Node) -> uint8 {
+    define result: uint8 = 0;
+    if (head.next != null) {
+        define nxt: Node · {pass: alias, immutable: true} = head.next;
+        result = nxt.value;
+    }
+    return result;
+}
+
+define max_value(head: Node) -> uint8 {
+    define best: uint8 = head.value;
+    define cursor: Node · {pass: alias, immutable: true} = head;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 16) {
+        if (cursor.value > best) {
+            best = cursor.value;
+        }
+        if (cursor.next == null) { walking = false; }
+        else {
+            define nxt: Node · {pass: alias, immutable: true} = cursor.next;
+            cursor = nxt;
+            steps += 1;
+        }
+    }
+    return best;
+}
+
+define sum_is(head: Node, expected: uint32) -> boolean {
+    define total: uint32 = 0;
+    define cursor: Node · {pass: alias, immutable: true} = head;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 16 && total < 1000000) {
+        total += cursor.value as uint32;
+        if (cursor.next == null) { walking = false; }
+        else {
+            define nxt: Node · {pass: alias, immutable: true} = cursor.next;
+            cursor = nxt;
+            steps += 1;
+        }
+    }
+    return total == expected;
+}
+
+define check_build() -> int32 {
+    if (build(0) != 0) { return 1; }
+    if (build(3) != 0) { return 2; }
+    if (build(8) != 0) { return 3; }
+    return 0;
+}
+
+define check_build_count() -> int32 {
+    if (build_and_count(0) != 1) { return 1; }
+    if (build_and_count(3) != 4) { return 2; }
+    if (build_and_count(8) != 9) { return 3; }
+    return 0;
+}
+
+define check_sum() -> int32 {
+    define h: Node · {storage: heap} = { value: 1 };
+    define s: Node · {storage: heap} = { value: 2 };
+    define t: Node · {storage: heap} = { value: 3 };
+    h.next = s;
+    s.next = t;
+    assert chain(head: h -> tail: null);
+    define code: int32 = 0;
+    if (sum_chain(h) != 6) { code = 1; }
+    if (!sum_is(h, 6)) { code = 2; }
+    if (sum_is(h, 5)) { code = 3; }
+    free(h);
+    return code;
+}
+
+define check_count() -> int32 {
+    define h: Node · {storage: heap} = { value: 1 };
+    define s: Node · {storage: heap} = { value: 2 };
+    define t: Node · {storage: heap} = { value: 3 };
+    h.next = s;
+    s.next = t;
+    assert chain(head: h -> tail: null);
+    define code: int32 = 0;
+    if (count_chain(h) != 3) { code = 1; }
+    free(h);
+    return code;
+}
+
+define check_contains() -> int32 {
+    define h: Node · {storage: heap} = { value: 1 };
+    define s: Node · {storage: heap} = { value: 2 };
+    define t: Node · {storage: heap} = { value: 3 };
+    h.next = s;
+    s.next = t;
+    assert chain(head: h -> tail: null);
+    define code: int32 = 0;
+    if (!contains(h, 1)) { code = 1; }
+    if (!contains(h, 2)) { code = 2; }
+    if (!contains(h, 3)) { code = 3; }
+    if (contains(h, 9)) { code = 4; }
+    free(h);
+    return code;
+}
+
+define check_tail() -> int32 {
+    define h: Node · {storage: heap} = { value: 1 };
+    define s: Node · {storage: heap} = { value: 2 };
+    define t: Node · {storage: heap} = { value: 3 };
+    h.next = s;
+    s.next = t;
+    assert chain(head: h -> tail: null);
+    define code: int32 = 0;
+    if (tail_value(h) != 3) { code = 1; }
+    free(h);
+
+    define only: Node · {storage: heap} = { value: 7 };
+    assert chain(head: only -> tail: null);
+    if (tail_value(only) != 7) { code = 2; }
+    free(only);
+    return code;
+}
+
+define check_second() -> int32 {
+    define h: Node · {storage: heap} = { value: 1 };
+    define s: Node · {storage: heap} = { value: 2 };
+    h.next = s;
+    assert chain(head: h -> tail: null);
+    define code: int32 = 0;
+    if (second_value(h) != 2) { code = 1; }
+    free(h);
+
+    define only: Node · {storage: heap} = { value: 5 };
+    assert chain(head: only -> tail: null);
+    if (second_value(only) != 0) { code = 2; }
+    free(only);
+    return code;
+}
+
+define check_max() -> int32 {
+    define h: Node · {storage: heap} = { value: 4 };
+    define s: Node · {storage: heap} = { value: 9 };
+    define t: Node · {storage: heap} = { value: 2 };
+    h.next = s;
+    s.next = t;
+    assert chain(head: h -> tail: null);
+    define code: int32 = 0;
+    if (max_value(h) != 9) { code = 1; }
+    free(h);
+    return code;
+}
+
+// 两种记录类型交替的链：释放要逐段跟着每条链接的静态类型走。
+type Odd = { value: uint8, next: Even | null };
+type Even = { value: uint8, next: Odd | null };
+
+define alternating(n: uint8[0, 8]) -> uint8 {
+    define head: Odd · {storage: heap} = { value: 0 };
+    define tail: Odd · {pass: alias} = head;
+    define i: uint8 = n;
+    while (i > 0) {
+        define even: Even · {storage: heap} = { value: 2 };
+        define odd: Odd · {storage: heap} = { value: n - i + 1 };
+        even.next = odd;
+        tail.next = even;
+        tail = odd;
+        i -= 1;
+    }
+    assert chain(head: head -> tail: null);
+    define total = head.value + tail.value;
+    free(head);
+    return total;
+}
+
+define fixed_alternating() -> uint8 {
+    define a: Odd · {storage: heap} = { value: 1 };
+    define b: Even · {storage: heap} = { value: 2 };
+    define c: Odd · {storage: heap} = { value: 3 };
+    define d: Even · {storage: heap} = { value: 4 };
+    a.next = b;
+    b.next = c;
+    c.next = d;
+    assert chain(head: a -> tail: null);
+    define total = a.value + b.value + c.value + d.value;
+    free(a);
+    return total;
+}
+
+define check_alternating() -> int32 {
+    if (alternating(0) != 0) { return 1; }
+    if (alternating(1) != 1) { return 2; }
+    if (alternating(4) != 4) { return 3; }
+    if (fixed_alternating() != 10) { return 4; }
+    return 0;
+}
+
+// 树里的节点类型也可以不同：后序释放会按字段的静态类型选择下一层的辅助函数。
+type Leaf = { value: uint8 };
+type Branch = { value: uint8, back: Leaf | null };
+type Root = { value: uint8, left: Leaf | null, right: Branch | null };
+
+define mixed_tree() -> uint8 {
+    define root: Root · {storage: heap} = { value: 1 };
+    define left: Leaf · {storage: heap} = { value: 2 };
+    define right: Branch · {storage: heap} = { value: 3 };
+    define back: Leaf · {storage: heap} = { value: 4 };
+    right.back = back;
+    root.left = left;
+    root.right = right;
+    define total = root.value + left.value + right.value + back.value;
+    free(root);
+    return total;
+}
+
+define check_mixed_tree() -> int32 {
+    if (mixed_tree() != 10) { return 1; }
+    return 0;
+}
+
+define main() -> int32 {
+    if (check_build() != 0) { return 1; }
+    if (check_build_count() != 0) { return 2; }
+    if (check_sum() != 0) { return 3; }
+    if (check_count() != 0) { return 4; }
+    if (check_contains() != 0) { return 5; }
+    if (check_tail() != 0) { return 6; }
+    if (check_second() != 0) { return 7; }
+    if (check_max() != 0) { return 8; }
+    if (check_alternating() != 0) { return 9; }
+    if (check_mixed_tree() != 0) { return 10; }
+    return 0;
+}

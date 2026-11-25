@@ -1,0 +1,134 @@
+type View = interface { x: uint8 };
+
+type Point = interface { x: int32, y: int32 };
+
+type Reversed = interface { y: int32, x: int32 };
+
+type Item = { x: uint8, y: uint8 };
+type Other = { padding: uint16, x: uint8 };
+type Holder = { view: View };
+
+type Coord = { x: int32, y: int32, z: int32 };
+type Pair = { label: uint8, x: int32, y: int32 };
+
+define read_x(v: View) -> uint8 {
+    return v.x;
+}
+
+define read_item(i: Item) -> uint8 {
+    return read_x(i);
+}
+
+define read_other(o: Other) -> uint8 {
+    return read_x(o);
+}
+
+define write_x(v: View, value: uint8) -> void {
+    v.x = value;
+}
+
+define bump_x(v: View) -> void {
+    if (v.x < 255) {
+        v.x += 1;
+    }
+}
+
+define holder_x(h: Holder) -> uint8 {
+    return h.view.x;
+}
+
+define set_holder_x(h: Holder, value: uint8) -> void {
+    h.view.x = value;
+}
+
+define sum_point(p: Point) -> int64 {
+    return (p.x as int64) + (p.y as int64);
+}
+
+define sum_reversed(r: Reversed) -> int64 {
+    return (r.x as int64) + (r.y as int64);
+}
+
+define coord_sum(c: Coord) -> int64 {
+    return sum_point(c);
+}
+
+define coord_sum_alt(c: Coord) -> int64 {
+    return sum_reversed(c);
+}
+
+define pair_sum(p: Pair) -> int64 {
+    return sum_point(p);
+}
+
+define read_all(a: Item, b: Other, c: Item) -> uint32 {
+    return (read_x(a) as uint32) + (read_x(b) as uint32) + (read_x(c) as uint32);
+}
+
+define normalize(i: Item) -> void {
+    write_x(i, 0);
+}
+
+// 拥有型移交：接口字段随记录一起交给被调方。被调方只能读，
+// 记录本身由它释放；接口选中的对象仍在调用方栈上。
+define take_holder(h: Holder · {storage: heap}) -> uint8 {
+    define v = h.view.x;
+    free(h);
+    return v;
+}
+
+// 先从记录里拷一份接口（自带偏移表），再释放记录，副本仍然可读。
+define take_holder_copy(h: Holder · {storage: heap}) -> uint8 {
+    define saved: View = h.view;
+    free(h);
+    return saved.x;
+}
+
+define main() -> int32 {
+
+    define item: Item = { x: 7, y: 42 };
+    if (read_x(item) != 7) { return 1; }
+    if (read_item(item) != 7) { return 2; }
+
+    define other: Other = { padding: 999, x: 8 };
+    if (read_other(other) != 8) { return 3; }
+
+    write_x(item, 9);
+    if (item.x != 9) { return 4; }
+
+    bump_x(item);
+    if (item.x != 10) { return 5; }
+
+    define h: Holder = { view: item };
+    if (holder_x(h) != 10) { return 6; }
+
+    set_holder_x(h, 20);
+    if (h.view.x != 20) { return 7; }
+
+    define c: Coord = { x: 3, y: 4, z: 5 };
+    if (coord_sum(c) != 7) { return 8; }
+    if (coord_sum_alt(c) != 7) { return 9; }
+
+    define p: Pair = { label: 1, x: 10, y: 20 };
+    if (pair_sum(p) != 30) { return 10; }
+
+    define a: Item = { x: 1 };
+    define b: Other = { x: 2 };
+    define cc: Item = { x: 3 };
+    if (read_all(a, b, cc) != 6) { return 11; }
+
+    normalize(a);
+    if (a.x != 0) { return 12; }
+
+    define taken_item: Item = { x: 5, y: 6 };
+    define taken: Holder · {storage: heap} = { view: taken_item };
+    if (take_holder(taken) != 5) { return 13; }
+    if (taken_item.x != 5) { return 14; }
+
+    define copied_item: Item = { x: 6, y: 7 };
+    define copied: Holder · {storage: heap} = { view: copied_item };
+    if (take_holder_copy(copied) != 6) { return 15; }
+    if (copied_item.x != 6) { return 16; }
+
+    return 0;
+}

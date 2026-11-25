@@ -1,0 +1,111 @@
+// 动态分配：对象的大小或数量在运行期才确定，编译期只知道一个区间。
+// 每次堆分配都会在堆状态里登记一个新对象（id#n），free 之后转成墓碑；
+// 某条退出路径上还活着的堆对象就是泄漏，编译期直接报错。
+
+// 长度来自参数的堆数组：生成的 C 是 calloc(n, sizeof(uint8_t))。
+define build_bytes(n: uint8[1, 8]) -> uint8[..] · {len: [1, 8]} · {storage: heap} {
+    define data: uint8[n] · {storage: heap};
+    define i: uint8 = 0;
+    while (i < n) {
+        data[i] = i + 1;
+        i += 1;
+    }
+    return data;
+}
+
+// 借用同一个堆数组求和，不夺走所有权。
+define total(items: uint8[..] · {len: [1, 8]}) -> uint16 {
+    define sum: uint16 = 0;
+    define i: uint32 = 0;
+    while (i < (items.len as uint32) && sum < 2040) {
+        sum += items[i] as uint16;
+        i += 1;
+    }
+    return sum;
+}
+
+// 拥有型形参：调用方把数组交出去，函数必须 free，否则每条退出路径都报泄漏。
+define drop_data: contract(items: uint8[..] · {len: [1, 8]} · {storage: heap}) -> uint8 (items) {
+    define first = items[0];
+    free(items);
+    return first;
+}
+
+// 每轮都分配一次、用完立刻释放：分配次数由参数决定，堆上同时最多一个对象。
+define churn(rounds: uint8[1, 4]) -> uint8 {
+    define acc: uint8 = 0;
+    define r: uint8 = 0;
+    while (r < rounds && acc < 200) {
+        define data: uint8[3] · {storage: heap};
+        data[0] = 1;
+        data[1] = 2;
+        data[2] = 3;
+        acc += data[0] + data[1] + data[2];
+        free(data);
+        r += 1;
+    }
+    return acc;
+}
+
+type Node = { value: uint8, next: Node | null };
+
+// 节点数量也来自参数：每轮一次 12 字节的分配，链长正是 1 + rounds。
+define list_total(n: uint8[0, 6]) -> uint16 {
+    define head: Node · {storage: heap} = { value: 0 };
+    define tail: Node · {pass: alias} = head;
+    define i: uint8 = 0;
+    while (i < n) {
+        define node: Node · {storage: heap} = { value: i + 1 };
+        tail.next = node;
+        tail = node;
+        i += 1;
+    }
+    assert chain(head: head -> tail: null);
+    define sum: uint16 = 0;
+    define cursor: Node · {pass: alias} | null = head;
+    define steps: uint8 = 0;
+    while (cursor != null && steps < 8 && sum < 2000) {
+        sum += cursor.value as uint16;
+        cursor = cursor.next;
+        steps += 1;
+    }
+    free(head);
+    return sum;
+}
+
+define take_and_drop(n: uint8[1, 8]) -> uint8 {
+    define items: uint8[..] · {len: [1, 8]} · {storage: heap} = build_bytes(n);
+    return drop_data(items);
+}
+
+define main() -> int32 {
+    // 长度 4 与 8 用同一段代码分配，容器大小在运行期才确定。
+    // 每条退出路径都必须先 free，否则报 heap leak。
+    define four: uint8[..] · {len: [1, 8]} · {storage: heap} = build_bytes(4);
+    define four_len = four.len;
+    define four_first = four[0];
+    define four_sum = total(four);
+    free(four);
+    if (four_len != 4) { return 1; }
+    if (four_first != 1) { return 2; }
+    if (four_sum != 10) { return 3; }
+
+    define eight: uint8[..] · {len: [1, 8]} · {storage: heap} = build_bytes(8);
+    define eight_sum = total(eight);
+    free(eight);
+    if (eight_sum != 36) { return 4; }
+
+    // 所有权移交：take_and_drop 内部 free，调用方手里已经没有对象。
+    if (take_and_drop(5) != 1) { return 5; }
+
+    // 同一函数里的多次分配：1 轮 6、3 轮 18。
+    if (churn(1) != 6) { return 6; }
+    if (churn(3) != 18) { return 7; }
+
+    // 运行期决定的节点数：0 个只分配头节点，4 个是 0+1+2+3+4。
+    if (list_total(0) != 0) { return 8; }
+    if (list_total(4) != 10) { return 9; }
+    if (list_total(6) != 21) { return 10; }
+
+    return 0;
+}

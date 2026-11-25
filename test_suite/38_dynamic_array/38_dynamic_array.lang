@@ -1,0 +1,262 @@
+// 动态数组：长度在运行期变化，元素类型固定为 uint8（不需要 JS 的动态类型）。
+//
+// Lan 的记录不能有切片字段，堆切片也不能凭空声明（只能来自拥有型返回），
+// 所以一个“数组”写成两件东西：拥有型的缓冲区 + 单独的已用长度 count。
+// 缓冲区容量必须是编译期常量（所有下标都要证在界内），这里取 16；
+// 再加一个 grow() 演示真正的扩容：新分配、逐个搬、旧块释放。
+
+type Slots = uint8[..];
+
+// 16 个槽的缓冲区，初始内容由 calloc 清零。
+define make_slots() -> uint8[..] · {len: {16}} · {storage: heap} {
+    define data: uint8[16] · {storage: heap};
+    return data;
+}
+
+define make_small() -> uint8[..] · {len: {8}} · {storage: heap} {
+    define data: uint8[8] · {storage: heap};
+    return data;
+}
+
+// push：满了就原样返回长度（有界容量下的退化行为），否则写在第 count 格后面。
+define push(items: Slots · {len: {16}}, count: uint32[0, 16], v: uint8) -> uint32[0, 16] {
+    if (count < 16) {
+        items[count] = v;
+        return count + 1;
+    }
+    return count;
+}
+
+// 读：越界时给 fallback，对应 JS 里 `arr[i] === undefined` 的分支。
+define at(items: Slots · {len: {16}}, count: uint32[0, 16], i: uint32[0, 16], fallback: uint8) -> uint8 {
+    if (i < count) { return items[i]; }
+    return fallback;
+}
+
+define set_at(items: Slots · {len: {16}}, count: uint32[0, 16], i: uint32[0, 16], v: uint8) -> void {
+    if (i < count) { items[i] = v; }
+}
+
+// splice(i, 0, v)：把 i 及其右侧整体右移一格，再写入。
+define insert(items: Slots · {len: {16}}, count: uint32[0, 16], i: uint32[0, 16], v: uint8) -> uint32[0, 16] {
+    if (count < 16 && i <= count) {
+        define j: uint32 = count;
+        while (j > i) {
+            items[j] = items[j - 1];
+            j -= 1;
+        }
+        items[i] = v;
+        return count + 1;
+    }
+    return count;
+}
+
+// splice(i, 1)：把右侧左移一格。
+define remove_at(items: Slots · {len: {16}}, count: uint32[0, 16], i: uint32[0, 16]) -> uint32[0, 16] {
+    if (count > 0 && i < count) {
+        define j: uint32 = i;
+        while (j + 1 < count) {
+            items[j] = items[j + 1];
+            j += 1;
+        }
+        return count - 1;
+    }
+    return count;
+}
+
+define pop_count(count: uint32[0, 16]) -> uint32[0, 15] {
+    if (count > 0) { return count - 1; }
+    return 0;
+}
+
+define last(items: Slots · {len: {16}}, count: uint32[1, 16]) -> uint8 {
+    return items[count - 1];
+}
+
+// indexOf：找不到返回 -1（JS 的 indexOf 语义）。
+define index_of(items: Slots · {len: {16}}, count: uint32[0, 16], v: uint8) -> int16[-1, 15] {
+    define i: uint32 = 0;
+    while (i < count) {
+        if (items[i] == v) { return i as int16; }
+        i += 1;
+    }
+    return -1;
+}
+
+define total(items: Slots · {len: {16}}, count: uint32[0, 16]) -> uint32 {
+    define sum: uint32 = 0;
+    define i: uint32 = 0;
+    while (i < count && sum < 5000) {
+        sum += items[i] as uint32;
+        i += 1;
+    }
+    return sum;
+}
+
+define reverse(items: Slots · {len: {16}}, count: uint32[0, 16]) -> void {
+    define i: uint32 = 0;
+    define j: uint32 = count;
+    while (i + 1 < j) {
+        define tmp = items[i];
+        items[i] = items[j - 1];
+        items[j - 1] = tmp;
+        i += 1;
+        j -= 1;
+    }
+}
+
+// arr.slice()：拷进另一块缓冲区前 count 个元素。
+define copy_into(dst: Slots · {len: {16}}, src: Slots · {len: {16}}, count: uint32[0, 16]) -> void {
+    define i: uint32 = 0;
+    while (i < count) {
+        dst[i] = src[i];
+        i += 1;
+    }
+}
+
+// 扩容：8 槽 → 16 槽。新缓冲区、逐个搬、旧缓冲区释放，返回新的拥有型缓冲区。
+define grow(items: uint8[..] · {len: {8}} · {storage: heap}, count: uint32[0, 8])
+            -> uint8[..] · {len: {16}} · {storage: heap} {
+    define bigger: uint8[16] · {storage: heap};
+    define i: uint32 = 0;
+    while (i < count) {
+        bigger[i] = items[i];
+        i += 1;
+    }
+    free(items);
+    return bigger;
+}
+
+// 基本操作：push / 读 / 写 / splice 插入删除 / indexOf / pop / reverse / 求和。
+define scenario_basics() -> uint32 {
+    define buf: uint8[..] · {len: {16}} · {storage: heap} = make_slots();
+    define n: uint32 = 0;
+    n = push(buf, n, 10);
+    n = push(buf, n, 20);
+    n = push(buf, n, 30);
+
+    define code: uint32 = 0;
+    if (n != 3) { code = 1; }
+    if (at(buf, n, 1, 0) != 20) { code = 2; }
+    if (at(buf, n, 9, 99) != 99) { code = 3; }
+    set_at(buf, n, 0, 11);
+    if (at(buf, n, 0, 0) != 11) { code = 4; }
+    set_at(buf, n, 7, 77);
+    if (at(buf, n, 7, 0) != 0) { code = 5; }
+
+    n = insert(buf, n, 1, 15);
+    if (n != 4) { code = 6; }
+    if (at(buf, n, 1, 0) != 15) { code = 7; }
+    if (at(buf, n, 2, 0) != 20) { code = 8; }
+
+    n = remove_at(buf, n, 1);
+    if (n != 3) { code = 9; }
+    if (at(buf, n, 1, 0) != 20) { code = 10; }
+
+    if (index_of(buf, n, 30) != 2) { code = 11; }
+    if (index_of(buf, n, 77) != -1) { code = 12; }
+
+    if (n > 0) { if (last(buf, n) != 30) { code = 13; } }
+    n = pop_count(n);
+    if (n != 2) { code = 14; }
+    if (at(buf, n, 2, 42) != 42) { code = 15; }
+
+    reverse(buf, n);
+    if (at(buf, n, 0, 0) != 20) { code = 16; }
+    if (at(buf, n, 1, 0) != 11) { code = 17; }
+    if (total(buf, n) != 31) { code = 18; }
+
+    free(buf);
+    return code;
+}
+
+// 压满 16 格：第 17 次 push 不再增长长度，这是有界容量的退化行为。
+define scenario_full() -> uint32 {
+    define buf: uint8[..] · {len: {16}} · {storage: heap} = make_slots();
+    define n: uint32 = 0;
+    define i: uint8 = 0;
+    while (i < 16) {
+        n = push(buf, n, i + 1);
+        i += 1;
+    }
+    define code: uint32 = 0;
+    if (n != 16) { code = 1; }
+    if (at(buf, n, 15, 0) != 16) { code = 2; }
+    n = push(buf, n, 99);
+    if (n != 16) { code = 3; }
+    if (at(buf, n, 15, 0) != 16) { code = 4; }
+    if (total(buf, n) != 136) { code = 5; }
+    free(buf);
+    return code;
+}
+
+// 扩容：8 槽装满后搬到 16 槽，原有内容和顺序都要保留。
+define scenario_grow() -> uint32 {
+    define small: uint8[..] · {len: {8}} · {storage: heap} = make_small();
+    define i: uint8 = 0;
+    while (i < 8) {
+        small[i] = (i + 1) * 2;
+        i += 1;
+    }
+    define wide: uint8[..] · {len: {16}} · {storage: heap} = grow(small, 8);
+
+    define code: uint32 = 0;
+    define n: uint32 = 8;
+    if (at(wide, n, 0, 0) != 2) { code = 1; }
+    if (at(wide, n, 7, 0) != 16) { code = 2; }
+    n = push(wide, n, 18);
+    if (n != 9) { code = 3; }
+    if (at(wide, n, 8, 0) != 18) { code = 4; }
+    if (total(wide, n) != 90) { code = 5; }
+    free(wide);
+    return code;
+}
+
+// 当队列用：从头部 shift（remove_at 0），从尾部 push。
+define scenario_queue() -> uint32 {
+    define buf: uint8[..] · {len: {16}} · {storage: heap} = make_slots();
+    define n: uint32 = 0;
+    n = push(buf, n, 1);
+    n = push(buf, n, 2);
+    n = push(buf, n, 3);
+    define front: uint8 = 0;
+    if (n > 0) { front = at(buf, n, 0, 0); }
+    n = remove_at(buf, n, 0);
+    define code: uint32 = 0;
+    if (front != 1) { code = 1; }
+    if (n != 2) { code = 2; }
+    if (at(buf, n, 0, 0) != 2) { code = 3; }
+    n = push(buf, n, 4);
+    if (n != 3) { code = 4; }
+    if (at(buf, n, 2, 0) != 4) { code = 5; }
+    free(buf);
+    return code;
+}
+
+// 两个数组：复制一份前缀后互不影响。
+define scenario_copy() -> uint32 {
+    define a: uint8[..] · {len: {16}} · {storage: heap} = make_slots();
+    define b: uint8[..] · {len: {16}} · {storage: heap} = make_slots();
+    define n: uint32 = 0;
+    n = push(a, n, 5);
+    n = push(a, n, 6);
+    n = push(a, n, 7);
+    copy_into(b, a, n);
+    set_at(b, n, 0, 50);
+    define code: uint32 = 0;
+    if (at(a, n, 0, 0) != 5) { code = 1; }
+    if (at(b, n, 0, 0) != 50) { code = 2; }
+    if (total(b, n) != 63) { code = 3; }
+    free(a);
+    free(b);
+    return code;
+}
+
+define main() -> int32 {
+    if (scenario_basics() != 0) { return 1; }
+    if (scenario_full() != 0) { return 2; }
+    if (scenario_grow() != 0) { return 3; }
+    if (scenario_queue() != 0) { return 4; }
+    if (scenario_copy() != 0) { return 5; }
+    return 0;
+}

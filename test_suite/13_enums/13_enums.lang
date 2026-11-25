@@ -1,0 +1,150 @@
+import { Element, SlotKind, Direction } from "../shared/shared.lang";
+
+enum Color: uint8 { Red = 1, Green, Blue, White };
+
+enum Suit: uint8 { Hearts = 0, Diamonds, Clubs, Spades };
+
+enum Priority: uint8 { Low = 1, Normal = 5, High = 9 };
+
+enum Temperature: int8 { Freezing = -40, Cold = -10, Mild = 10, Hot = 30 };
+
+enum Flag: uint8 { Only = 7 };
+
+define color_code(c: Color) -> uint8 {
+    return c as uint8;
+}
+
+define suit_code(s: Suit) -> uint8 {
+    return s as uint8;
+}
+
+define priority_code(p: Priority) -> uint8 {
+    return p as uint8;
+}
+
+define temp_code(t: Temperature) -> int8 {
+    return t as int8;
+}
+
+define is_red(c: Color) -> boolean {
+    return c == Color.Red;
+}
+
+define is_warm(t: Temperature) -> boolean {
+    return t == Temperature.Mild || t == Temperature.Hot;
+}
+
+type Card = { suit: Suit, rank: uint8 };
+
+type Spell = { element: Element, power: uint16, kind: SlotKind };
+
+define card_suit(c: Card) -> uint8 {
+    return c.suit as uint8;
+}
+
+define spell_power(s: Spell) -> uint16 {
+    return s.power;
+}
+
+define spell_element_code(s: Spell) -> uint8 {
+    return s.element as uint8;
+}
+
+define color_name_code(c: Color) -> uint8 {
+    if (c == Color.Red) { return 1; }
+    if (c == Color.Green) { return 2; }
+    if (c == Color.Blue) { return 3; }
+    return 4;
+}
+
+define weight(p: Priority) -> uint16 {
+    if (p == Priority.Low) { return 1; }
+    if (p == Priority.Normal) { return 5; }
+    return 9;
+}
+
+define element_code(e: Element) -> uint8 {
+    return e as uint8;
+}
+
+define is_physical(e: Element) -> boolean {
+    return e == Element.Physical;
+}
+
+define slot_code(k: SlotKind) -> uint8 {
+    return k as uint8;
+}
+
+define is_empty_slot(k: SlotKind) -> boolean {
+    return k == SlotKind.Empty;
+}
+
+define direction_code(d: Direction) -> int8 {
+    return d as int8;
+}
+
+define count_high(levels: uint8[8]) -> uint8[0, 8] {
+    define total: uint8 = 0;
+    define i: uint8 = 0;
+    while (i < 8 && total < 8) {
+        if (levels[i] == Priority.High as uint8) {
+            total += 1;
+        }
+        i += 1;
+    }
+    return total;
+}
+
+define main() -> int32 {
+
+    if (color_code(Color.Red) != 1) { return 1; }
+    if (color_code(Color.Green) != 2) { return 2; }
+    if (color_code(Color.Blue) != 3) { return 3; }
+    if (color_code(Color.White) != 4) { return 4; }
+
+    if (suit_code(Suit.Hearts) != 0) { return 5; }
+    if (suit_code(Suit.Spades) != 3) { return 6; }
+
+    if (priority_code(Priority.Low) != 1) { return 7; }
+    if (priority_code(Priority.Normal) != 5) { return 8; }
+    if (priority_code(Priority.High) != 9) { return 9; }
+
+    if (temp_code(Temperature.Freezing) != -40) { return 10; }
+    if (temp_code(Temperature.Hot) != 30) { return 11; }
+    if (!is_warm(Temperature.Hot)) { return 12; }
+    if (is_warm(Temperature.Cold)) { return 13; }
+
+    if (Flag.Only as uint8 != 7) { return 14; }
+
+    if (!is_red(Color.Red)) { return 15; }
+    if (is_red(Color.Blue)) { return 16; }
+
+    define card: Card = { suit: Suit.Clubs, rank: 12 };
+    if (card_suit(card) != 2) { return 17; }
+    if (card.rank != 12) { return 18; }
+
+    define spell: Spell = { element: Element.Fire, power: 40, kind: SlotKind.Weapon };
+    if (spell_power(spell) != 40) { return 19; }
+    if (spell_element_code(spell) != 2) { return 20; }
+
+    if (color_name_code(Color.Blue) != 3) { return 21; }
+    if (color_name_code(Color.White) != 4) { return 22; }
+    if (weight(Priority.Normal) != 5) { return 23; }
+
+    if (element_code(Element.Physical) != 1) { return 24; }
+    if (element_code(Element.Dark) != 7) { return 25; }
+    if (!is_physical(Element.Physical)) { return 26; }
+    if (is_physical(Element.Fire)) { return 27; }
+
+    if (slot_code(SlotKind.Empty) != 0) { return 28; }
+    if (!is_empty_slot(SlotKind.Empty)) { return 29; }
+    if (is_empty_slot(SlotKind.Weapon)) { return 30; }
+
+    if (direction_code(Direction.North) != -2) { return 31; }
+    if (direction_code(Direction.West) != 1) { return 32; }
+
+    define levels: uint8[8] = [1, 9, 5, 9, 1, 9, 5, 1];
+    if (count_high(levels) != 3) { return 33; }
+
+    return 0;
+}

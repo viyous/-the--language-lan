@@ -1,0 +1,3 @@
+import { Small, clamp100 } from "./lib_math.lang";
+
+export { Small, clamp100 };

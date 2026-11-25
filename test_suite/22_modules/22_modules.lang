@@ -1,0 +1,100 @@
+import { Small, Ratio, clamp100, add_small, sat_sub, half, is_even, scale }
+    from "./lib/lib_math.lang";
+import { Stats, empty, observe, span, total_of, count_of }
+    from "./lib/lib_stats.lang";
+import { clamp100 as reexport_clamp } from "./lib/lib_reexport.lang";
+
+define double_small(a: Small) -> uint16[0, 200] {
+    return add_small(a, a);
+}
+
+define tenth(x: int32) -> uint8[0, 10] {
+    define c: Small = clamp100(x);
+    return c / 10;
+}
+
+define both_clamps(x: int32) -> boolean {
+    return clamp100(x) == reexport_clamp(x);
+}
+
+define range_of(a: Small, b: Small, c: Small) -> Small {
+    define e: Stats = empty();
+    define s1: Stats = observe(e, a);
+    define s2: Stats = observe(s1, b);
+    define s3: Stats = observe(s2, c);
+    return span(s3);
+}
+
+define observe_count(a: Small, b: Small) -> uint8[0, 8] {
+    define e: Stats = empty();
+    define s1: Stats = observe(e, a);
+    define s2: Stats = observe(s1, b);
+    return count_of(s2);
+}
+
+define four_total(a: Small, b: Small, c: Small, d: Small) -> uint16[0, 400] {
+    return total_of(a, b, c, d);
+}
+
+define ramp_span(n: Small) -> Small {
+    define i: uint8 = 0;
+    define lo: Small = 0;
+    define hi: Small = 0;
+    while (i < 8 && (i as uint16) <= (n as uint16)) {
+        if (i < lo) { lo = i; }
+        if (i > hi) { hi = i; }
+        i += 1;
+    }
+    return sat_sub(hi, lo);
+}
+
+define percent(a: Small, k: uint8[0, 10]) -> uint8[0, 100] {
+    define r: Ratio = scale(a, k);
+    define p: uint16 = r / 10;
+    return p as uint8;
+}
+
+define main() -> int32 {
+
+    define s: Small = clamp100(50);
+    if (s != 50) { return 1; }
+    if (clamp100(-7) != 0) { return 2; }
+    if (clamp100(700) != 100) { return 3; }
+
+    if (tenth(85) != 8) { return 4; }
+    if (double_small(21) != 42) { return 5; }
+    if (sat_sub(30, 12) != 18) { return 6; }
+    if (sat_sub(12, 30) != 0) { return 7; }
+
+    if (half(100) != 50) { return 8; }
+    if (!is_even(8)) { return 9; }
+    if (is_even(7)) { return 10; }
+    if (scale(100, 10) != 1000) { return 11; }
+
+    define st0: Stats = empty();
+    if (count_of(st0) != 0) { return 12; }
+    define st1: Stats = observe(st0, 42);
+    if (count_of(st1) != 1) { return 13; }
+    if (span(st1) != 0) { return 14; }
+    define st2: Stats = observe(st1, 90);
+    if (span(st2) != 48) { return 15; }
+    define st3: Stats = observe(st2, 10);
+    if (span(st3) != 80) { return 16; }
+    if (count_of(st3) != 3) { return 17; }
+
+    if (range_of(20, 70, 45) != 50) { return 18; }
+    if (observe_count(3, 9) != 2) { return 19; }
+    if (four_total(10, 20, 30, 40) != 100) { return 20; }
+
+    if (!both_clamps(64)) { return 21; }
+    if (!both_clamps(-1)) { return 22; }
+    if (!both_clamps(101)) { return 23; }
+
+    if (ramp_span(4) != 4) { return 24; }
+    if (ramp_span(0) != 0) { return 25; }
+
+    if (percent(50, 4) != 20) { return 26; }
+    if (percent(100, 10) != 100) { return 27; }
+
+    return 0;
+}

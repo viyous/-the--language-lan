@@ -1,0 +1,170 @@
+type Vec2 = { x: uint16, y: uint16 };
+type Box = { lo: Vec2, hi: Vec2 };
+type Table = { rows: uint8[4], count: uint8[0, 4] };
+
+define shift_alias(v: Vec2) -> void {
+    if (v.x < 60000) { v.x += 100; }
+}
+
+define shift_copy(v: Vec2 · {pass: copy}) -> uint16 {
+    if (v.x < 60000) { v.x += 100; }
+    return v.x;
+}
+
+define bumped(v: Vec2 · {pass: copy}) -> Vec2 {
+    define r: Vec2 = { x: v.x, y: v.y };
+    if (r.x < 60000) { r.x += 1; }
+    if (r.y < 60000) { r.y += 1; }
+    return r as: copy;
+}
+
+define clear_alias(a: uint8[4]) -> void {
+    a[0] = 0;
+    a[1] = 0;
+    a[2] = 0;
+    a[3] = 0;
+}
+
+define clear_copy(a: uint8[4] · {pass: copy}) -> uint8 {
+    a[0] = 0;
+    a[1] = 0;
+    a[2] = 0;
+    a[3] = 0;
+    return a[0] + a[1] + a[2] + a[3];
+}
+
+define sum_copy(a: uint8[4] · {pass: copy}) -> uint16 {
+    return (a[0] as uint16) + (a[1] as uint16) + (a[2] as uint16) + (a[3] as uint16);
+}
+
+define grow(b: Box) -> Box {
+    define lo_x: uint16 = b.lo.x;
+    define hi_x: uint16 = b.hi.x;
+    if (lo_x > 0) { lo_x -= 1; }
+    if (hi_x < 60000) { hi_x += 1; }
+    return { lo: { x: lo_x, y: b.lo.y }, hi: { x: hi_x, y: b.hi.y } };
+}
+
+define box_width(b: Box) -> uint16 {
+    if (b.hi.x < b.lo.x) { return 0; }
+    return b.hi.x - b.lo.x;
+}
+
+define widen_lo(b: Box, delta: uint16[0, 100]) -> void {
+    if (b.lo.x >= delta) { b.lo.x -= delta; }
+}
+
+define bump_rows(t: Table) -> void {
+    if (t.rows[0] < 250) { t.rows[0] += 5; }
+}
+
+define bump_rows_copy(t: Table · {pass: copy}) -> uint8 {
+    if (t.rows[0] < 250) { t.rows[0] += 5; }
+    return t.rows[0];
+}
+
+define row_sum(t: Table) -> uint16 {
+    return (t.rows[0] as uint16) + (t.rows[1] as uint16)
+         + (t.rows[2] as uint16) + (t.rows[3] as uint16);
+}
+
+define digit_weight(pos: uint8[0, 3]) -> uint16 {
+    define w: uint16[4] · {storage: rodata} = [1, 10, 100, 1000];
+    return w[pos];
+}
+
+define hex_value(pos: uint8[0, 3]) -> uint8 {
+    define v: uint8[4] · {storage: rodata} = [1, 2, 4, 8];
+    return v[pos];
+}
+
+define weights_total() -> uint16 {
+    define w: uint16[4] · {storage: rodata} = [1, 10, 100, 1000];
+    define total: uint16 = 0;
+    define i: uint8 = 0;
+    while (i < 4 && total < 5000) {
+        total += w[i];
+        i += 1;
+    }
+    return total;
+}
+
+define copy_into(dst: uint8[4], src: uint8[4]) -> void {
+    dst[0, 4) = src[0, 4) as: copy;
+}
+
+define pair(a: Vec2, b: Vec2) -> Box {
+    return { lo: a as: copy, hi: b as: copy };
+}
+
+define main() -> int32 {
+
+    define v: Vec2 = { x: 10, y: 20 };
+    shift_alias(v);
+    if (v.x != 110) { return 1; }
+
+    define w: Vec2 = { x: 10, y: 20 };
+    if (shift_copy(w) != 110) { return 2; }
+    if (w.x != 10) { return 3; }
+
+    define g: Vec2 = bumped(w);
+    if (g.x != 11) { return 4; }
+    if (g.y != 21) { return 5; }
+    if (w.x != 10) { return 6; }
+    if (w.y != 20) { return 7; }
+
+    define a: uint8[4] = [1, 2, 3, 4];
+    clear_alias(a);
+    if (a[0] != 0) { return 8; }
+    if (a[3] != 0) { return 9; }
+
+    define b: uint8[4] = [1, 2, 3, 4];
+    if (clear_copy(b) != 0) { return 10; }
+    if (b[0] != 1) { return 11; }
+    if (b[3] != 4) { return 12; }
+    if (sum_copy(b) != 10) { return 13; }
+
+    define box: Box = { lo: { x: 10, y: 20 }, hi: { x: 30, y: 40 } };
+    define bigger: Box = grow(box);
+    if (box_width(box) != 20) { return 14; }
+    if (box_width(bigger) != 22) { return 15; }
+    if (box.lo.x != 10) { return 16; }
+    if (bigger.lo.x != 9) { return 17; }
+    if (bigger.hi.x != 31) { return 18; }
+
+    widen_lo(box, 4);
+    if (box.lo.x != 6) { return 19; }
+    if (box_width(box) != 24) { return 20; }
+
+    define t: Table = { rows: [10, 20, 30, 40], count: 4 };
+    if (row_sum(t) != 100) { return 21; }
+    bump_rows(t);
+    if (t.rows[0] != 15) { return 22; }
+    if (row_sum(t) != 105) { return 23; }
+
+    define t2: Table = { rows: [10, 20, 30, 40], count: 4 };
+    if (bump_rows_copy(t2) != 15) { return 24; }
+    if (t2.rows[0] != 10) { return 25; }
+    if (row_sum(t2) != 100) { return 26; }
+
+    if (digit_weight(0) != 1) { return 27; }
+    if (digit_weight(1) != 10) { return 28; }
+    if (digit_weight(3) != 1000) { return 29; }
+    if (hex_value(2) != 4) { return 30; }
+    if (weights_total() != 1111) { return 31; }
+
+    define src: uint8[4] = [7, 8, 9, 10];
+    define dst: uint8[4] = [0, 0, 0, 0];
+    copy_into(dst, src);
+    if (dst[0] != 7) { return 32; }
+    if (dst[3] != 10) { return 33; }
+
+    define p1: Vec2 = { x: 1, y: 2 };
+    define p2: Vec2 = { x: 3, y: 4 };
+    define pb: Box = pair(p1, p2);
+    if (pb.lo.x != 1) { return 34; }
+    if (pb.hi.y != 4) { return 35; }
+    if (box_width(pb) != 2) { return 36; }
+
+    return 0;
+}

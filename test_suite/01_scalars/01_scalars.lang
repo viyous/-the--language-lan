@@ -1,0 +1,161 @@
+define add_bounded(a: uint8[0, 100], b: uint8[0, 100]) -> uint8[0, 200] {
+    return a + b;
+}
+
+define add_widen(a: uint8, b: uint8) -> uint16 {
+    return a + b;
+}
+
+define sub_nonneg(a: uint8[100, 255], b: uint8[0, 100]) -> uint8 {
+    return a - b;
+}
+
+define mul_widen(a: uint8, b: uint8) -> uint16 {
+    return a * b;
+}
+
+define div_exact(a: uint8, b: uint8[1, 255]) -> uint8 {
+    return a / b;
+}
+
+define mod_two(a: uint8) -> uint8[0, 1] {
+    return a % 2;
+}
+
+define mod_generic(a: uint8, b: uint8[2, 255]) -> uint8[0, 254] {
+    return a % b;
+}
+
+define add_signed(a: int8[-50, 50], b: int8[-50, 50]) -> int8[-100, 100] {
+    return a + b;
+}
+
+define negate(a: int16[-1000, 1000]) -> int16[-1000, 1000] {
+    return -a;
+}
+
+define square_signed(a: int16[-30, 30]) -> int16[0, 900] {
+    return a * a;
+}
+
+define mixed_sign(a: int8, b: uint8) -> int16 {
+    return (a as int16) + (b as int16);
+}
+
+define low_byte(a: uint16) -> uint8 {
+    return (a & 255) as uint8;
+}
+
+define high_byte(a: uint16) -> uint8 {
+    return (a >> 8) as uint8;
+}
+
+define clear_low(a: uint16) -> uint16 {
+    return a & 0xFF00;
+}
+
+define toggle(a: uint8, b: uint8) -> uint8 {
+    return a ^ b;
+}
+
+define complement(a: uint8) -> uint8 {
+    return ~a;
+}
+
+define shl_four(a: uint8[0, 15]) -> uint8[0, 240] {
+    return a << 4;
+}
+
+define shr_eight(a: uint16) -> uint16[0, 255] {
+    return a >> 8;
+}
+
+define wrap_add(a: uint8, b: uint8) -> uint8 {
+    return (a + b) as: wrap uint8;
+}
+
+define sat_add(a: uint8, b: uint8) -> uint8 {
+    return (a + b) as: sat uint8;
+}
+
+define trap_narrow(a: uint16[0, 200]) -> uint8 {
+    return a as: trap uint8;
+}
+
+define trunc_narrow(a: uint16[0, 200]) -> uint8 {
+    return a as: trunc uint8;
+}
+
+define wrap_narrow(a: uint32) -> uint8 {
+    return a as: wrap uint8;
+}
+
+define between(x: uint8, lo: uint8, hi: uint8 & >= lo) -> boolean {
+    return x >= lo && x <= hi;
+}
+
+define exclusive(a: boolean, b: boolean) -> boolean {
+    return a xor b;
+}
+
+define both(a: boolean, b: boolean) -> boolean {
+    return a && b;
+}
+
+define neither(a: boolean, b: boolean) -> boolean {
+    return !a && !b;
+}
+
+define count_true(a: boolean, b: boolean, c: boolean) -> uint8[0, 3] {
+    return (a as uint8) + (b as uint8) + (c as uint8);
+}
+
+define constant_sum() -> uint16[1000, 1000] {
+    return 500 + 500;
+}
+
+define constant_mask() -> uint8[15, 15] {
+    return 0xF0 >> 4;
+}
+
+define main() -> int32 {
+
+    if (add_bounded(100, 100) != 200) { return 1; }
+    if (add_widen(255, 255) != 510) { return 2; }
+    if (sub_nonneg(100, 100) != 0) { return 3; }
+    if (mul_widen(255, 255) != 65025) { return 4; }
+    if (div_exact(200, 8) != 25) { return 5; }
+    if (mod_two(201) != 1) { return 6; }
+    if (mod_generic(200, 7) != 4) { return 31; }
+
+    if (add_signed(-50, -50) != -100) { return 7; }
+    if (negate(1000) != -1000) { return 8; }
+    if (square_signed(-30) != 900) { return 9; }
+    if (mixed_sign(-100, 200) != 100) { return 10; }
+
+    if (low_byte(0x1234) != 0x34) { return 11; }
+    if (high_byte(0x1234) != 0x12) { return 12; }
+    if (clear_low(0x1234) != 0x1200) { return 13; }
+    if (toggle(0x0F, 0xFF) != 0xF0) { return 14; }
+    if (complement(0x0F) != 0xF0) { return 15; }
+    if (shl_four(15) != 240) { return 16; }
+    if (shr_eight(0xFF00) != 0xFF) { return 17; }
+
+    if (wrap_add(255, 1) != 0) { return 18; }
+    if (sat_add(255, 1) != 255) { return 19; }
+    if (trap_narrow(200) != 200) { return 20; }
+    if (wrap_narrow(0x1FF) != 0xFF) { return 21; }
+
+    if (!between(50, 10, 90)) { return 22; }
+    if (between(5, 10, 90)) { return 23; }
+    if (!exclusive(true, false)) { return 24; }
+    if (exclusive(true, true)) { return 25; }
+    if (!both(true, true)) { return 26; }
+    if (!neither(false, false)) { return 27; }
+    if (count_true(true, true, true) != 3) { return 28; }
+
+    if (constant_sum() != 1000) { return 29; }
+    if (constant_mask() != 15) { return 30; }
+
+    return 0;
+}

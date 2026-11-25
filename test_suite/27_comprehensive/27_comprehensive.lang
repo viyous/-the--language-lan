@@ -1,0 +1,175 @@
+enum Op: uint8 {
+    PUSH = 1,
+    ADD,
+    MUL,
+    DUP,
+    HALT
+}
+
+type Trace = { pc: uint8, op: uint8, next: Trace | null };
+
+type Machine = {
+    sp: uint8[0, 16],
+    acc: uint16[0, 65025],
+    steps: uint8[0, 8],
+    halted: boolean
+};
+
+define push(stack: uint8[16], m: Machine, v: uint8) -> void {
+    define sp: uint8 = m.sp;
+    if (sp < 16) {
+        stack[sp] = v;
+        m.sp = sp + 1;
+    }
+}
+
+define pop(stack: uint8[16], m: Machine) -> uint8 {
+    define sp: uint8 = m.sp;
+    if (sp == 0) { return 0; }
+    define idx: uint8 = sp - 1;
+    m.sp = idx;
+    return stack[idx];
+}
+
+define execute(prog: uint8[16], m: Machine, budget: uint8[0, 8]) -> uint8 {
+    define stack: uint8[16] · {storage: heap};
+    define i: uint8 = 0;
+    while (i < 16) {
+        stack[i] = 0;
+        i += 1;
+    }
+
+    define pc: uint8 = 0;
+    while (pc + 1 < 16 && m.steps < budget && !m.halted) {
+        define op: uint8 = prog[pc];
+        define arg: uint8 = prog[pc + 1];
+        m.steps += 1;
+        pc += 2;
+
+        if (op == 1) {
+            push(stack, m, arg);
+        } else if (op == 2 && m.sp >= 2) {
+            define b: uint8 = pop(stack, m);
+            define a: uint8 = pop(stack, m);
+            define s: uint16 = (a as uint16) + (b as uint16);
+            m.acc = s;
+            push(stack, m, s as: sat uint8);
+        } else if (op == 3 && m.sp >= 2) {
+            define b2: uint8 = pop(stack, m);
+            define a2: uint8 = pop(stack, m);
+            define p: uint16 = (a2 as uint16) * (b2 as uint16);
+            m.acc = p;
+            push(stack, m, p as: sat uint8);
+        } else if (op == 4 && m.sp >= 1 && m.sp < 16) {
+            define idx: uint8 = m.sp - 1;
+            define top: uint8 = stack[idx];
+            push(stack, m, top);
+        } else {
+
+            m.halted = true;
+        }
+    }
+
+    define result: uint8 = 0;
+    define depth: uint8 = m.sp;
+    if (depth > 0) {
+        define last: uint8 = depth - 1;
+        result = stack[last];
+    }
+    free(stack);
+    return result;
+}
+
+define trace_slots() -> uint8[0, 9] {
+    define head: Trace · {storage: heap} = { pc: 0, op: 1 };
+    define tail: Trace · {pass: alias} = head;
+    define i: uint8 = 0;
+    while (i < 8) {
+        define node: Trace · {storage: heap} = { pc: i, op: 1 };
+        tail.next = node;
+        tail = node;
+        i += 1;
+    }
+
+    assert chain(head: head -> tail: null);
+
+    define count: uint8 = i + 1;
+    free(head);
+    return count;
+}
+
+define trace_single() -> uint8[0, 9] {
+    define only: Trace · {storage: heap} = { pc: 0, op: 5 };
+    assert chain(head: only -> tail: null);
+    define count: uint8 = 1;
+    free(only);
+    return count;
+}
+
+define main() -> int32 {
+
+    define prog: uint8[16] · {storage: rodata} = [
+        1, 3,
+        1, 4,
+        2, 0,
+        4, 0,
+        3, 0,
+        5, 0,
+        0, 0,
+        0, 0
+    ];
+
+    define m1: Machine = { sp: 0, acc: 0, steps: 0, halted: false };
+    if (execute(prog, m1, 8) != 49) { return 1; }
+    if (m1.steps != 6) { return 2; }
+    if (!m1.halted) { return 3; }
+    if (m1.acc != 49) { return 4; }
+    if (m1.sp != 1) { return 5; }
+
+    define m2: Machine = { sp: 0, acc: 0, steps: 0, halted: false };
+    if (execute(prog, m2, 2) != 4) { return 6; }
+    if (m2.steps != 2) { return 7; }
+    if (m2.halted) { return 8; }
+
+    define m3: Machine = { sp: 0, acc: 0, steps: 0, halted: false };
+    if (execute(prog, m3, 4) != 7) { return 9; }
+    if (m3.acc != 7) { return 10; }
+    if (m3.sp != 2) { return 11; }
+
+    define empty_prog: uint8[16] · {storage: rodata} = [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+    define m4: Machine = { sp: 0, acc: 0, steps: 0, halted: false };
+    if (execute(empty_prog, m4, 8) != 0) { return 12; }
+    if (m4.steps != 1) { return 13; }
+    if (!m4.halted) { return 14; }
+
+    define bad_prog: uint8[16] · {storage: rodata} = [
+        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+    define m5: Machine = { sp: 0, acc: 0, steps: 0, halted: false };
+    if (execute(bad_prog, m5, 8) != 0) { return 15; }
+    if (m5.steps != 1) { return 16; }
+    if (!m5.halted) { return 17; }
+
+    define push_prog: uint8[16] · {storage: rodata} = [
+        1, 42, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+    define m6: Machine = { sp: 0, acc: 0, steps: 0, halted: false };
+    if (execute(push_prog, m6, 8) != 42) { return 18; }
+    if (m6.steps != 2) { return 19; }
+
+    if (trace_slots() != 9) { return 20; }
+    if (trace_single() != 1) { return 21; }
+
+    if ((Op.PUSH as uint8) != 1) { return 22; }
+    if ((Op.ADD as uint8) != 2) { return 23; }
+    if ((Op.MUL as uint8) != 3) { return 24; }
+    if ((Op.DUP as uint8) != 4) { return 25; }
+    if ((Op.HALT as uint8) != 5) { return 26; }
+
+    if (prog[0] != (Op.PUSH as uint8)) { return 27; }
+    if (prog[10] != (Op.HALT as uint8)) { return 28; }
+
+    return 0;
+}

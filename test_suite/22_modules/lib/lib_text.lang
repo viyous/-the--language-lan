@@ -1,0 +1,17 @@
+import { Small, add_small } from "./lib_math.lang";
+
+type Label = { name: uint8, weight: Small };
+
+define weight_of(l: Label) -> Small {
+    return l.weight;
+}
+
+define total_weight(a: Label, b: Label) -> uint16[0, 200] {
+    return add_small(a.weight, b.weight);
+}
+
+define make(name: uint8, weight: Small) -> Label {
+    return { name: name, weight: weight };
+}
+
+export { Label, weight_of, total_weight, make };

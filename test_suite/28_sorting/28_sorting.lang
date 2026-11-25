@@ -1,0 +1,221 @@
+define swap(a: uint8[16], i: uint8[0, 15], j: uint8[0, 15]) -> void {
+    define t: uint8 = a[i];
+    a[i] = a[j];
+    a[j] = t;
+}
+
+define is_sorted(a: uint8[16], n: uint8[0, 16]) -> boolean {
+    define i: uint8 = 1;
+    define ok: boolean = true;
+    while (i < n) {
+        define prev: uint8 = i - 1;
+        if (a[prev] > a[i]) { ok = false; }
+        i += 1;
+    }
+    return ok;
+}
+
+define total(a: uint8[16], n: uint8[0, 16]) -> uint16 {
+    define sum: uint16 = 0;
+    define i: uint8 = 0;
+    while (i < n && sum < 4000) {
+        sum += a[i] as uint16;
+        i += 1;
+    }
+    return sum;
+}
+
+define insertion_sort(a: uint8[16], n: uint8[0, 16]) -> void {
+    define i: uint8 = 1;
+    while (i < n) {
+        define key: uint8 = a[i];
+        define j: uint8 = i;
+        while (j > 0 && a[j - 1] > key) {
+            define prev: uint8 = j - 1;
+            a[j] = a[prev];
+            j = prev;
+        }
+        a[j] = key;
+        i += 1;
+    }
+}
+
+define selection_sort(a: uint8[16], n: uint8[0, 16]) -> void {
+    define i: uint8 = 0;
+    while (i < n) {
+        define best: uint8 = i;
+        define j: uint8 = i;
+        if (i < 15) { j = i + 1; }
+        while (j < n) {
+            if (a[j] < a[best]) { best = j; }
+            j += 1;
+        }
+        if (best != i) { swap(a, i, best); }
+        i += 1;
+    }
+}
+
+define shell_sort(a: uint8[16], n: uint8[0, 16]) -> void {
+    define gap: uint8 = 8;
+    while (gap > 0) {
+        define i: uint8 = gap;
+        while (i < n) {
+            define key: uint8 = a[i];
+            define j: uint8 = i;
+            while (j >= gap && a[j - gap] > key) {
+                define prev: uint8 = j - gap;
+                a[j] = a[prev];
+                j = prev;
+            }
+            a[j] = key;
+            i += 1;
+        }
+        gap = gap / 2;
+    }
+}
+
+define partition(a: uint8[16], lo: uint8[0, 15], hi: uint8[0, 15]) -> uint8[0, 15] {
+    define pivot: uint8 = a[hi];
+    define i: uint8 = lo;
+    define j: uint8 = lo;
+    while (j < hi) {
+        if (a[j] <= pivot) {
+            swap(a, i, j);
+            if (i < 15) { i += 1; }
+        }
+        j += 1;
+    }
+    swap(a, i, hi);
+    return i;
+}
+
+define quick_sort(a: uint8[16], lo: uint8[0, 15], hi: uint8[0, 15]) -> void {
+    if (lo >= hi) { return; }
+    define mid: uint8[0, 15] = partition(a, lo, hi);
+    if (mid > lo) {
+        define left_hi: uint8[0, 15] = mid - 1;
+        quick_sort(a, lo, left_hi);
+    }
+    if (mid < hi) {
+        define right_lo: uint8[0, 15] = mid + 1;
+        quick_sort(a, right_lo, hi);
+    }
+}
+
+define sift_down(a: uint8[16], root: uint8[0, 15], n: uint8[0, 16]) -> void {
+    define i: uint8 = root;
+    define going: boolean = true;
+    while (going) {
+        define left: uint8 = i * 2 + 1;
+        if (left >= n) { going = false; }
+        else {
+            define bigger: uint8 = left;
+            define right: uint8 = left + 1;
+            if (right < n) {
+                if (a[right] > a[left]) { bigger = right; }
+            }
+            if (a[bigger] <= a[i]) { going = false; }
+            else {
+                swap(a, i, bigger);
+                i = bigger;
+            }
+        }
+    }
+}
+
+define heap_sort(a: uint8[16], n: uint8[0, 16]) -> void {
+
+    define i: uint8 = n / 2;
+    while (i > 0) {
+        define root: uint8[0, 15] = i - 1;
+        sift_down(a, root, n);
+        i -= 1;
+    }
+
+    define end: uint8 = n;
+    while (end > 1) {
+        define last: uint8[0, 15] = end - 1;
+        swap(a, 0, last);
+        define shrink: uint8[0, 16] = last;
+        sift_down(a, 0, shrink);
+        end -= 1;
+    }
+}
+
+define main() -> int32 {
+
+    define a1: uint8[16] = [9, 3, 7, 1, 8, 2, 6, 4, 5, 0, 15, 11, 13, 10, 14, 12];
+    define s1: uint16 = total(a1, 16);
+    insertion_sort(a1, 16);
+    if (!is_sorted(a1, 16)) { return 1; }
+    if (total(a1, 16) != s1) { return 2; }
+    if (a1[0] != 0) { return 3; }
+    if (a1[15] != 15) { return 4; }
+
+    define a2: uint8[16] = [9, 3, 7, 1, 8, 2, 6, 4, 5, 0, 15, 11, 13, 10, 14, 12];
+    selection_sort(a2, 16);
+    if (!is_sorted(a2, 16)) { return 5; }
+    if (total(a2, 16) != 120) { return 6; }
+
+    define a3: uint8[16] = [9, 3, 7, 1, 8, 2, 6, 4, 5, 0, 15, 11, 13, 10, 14, 12];
+    shell_sort(a3, 16);
+    if (!is_sorted(a3, 16)) { return 7; }
+    if (a3[3] != 3) { return 8; }
+
+    define a4: uint8[16] = [9, 3, 7, 1, 8, 2, 6, 4, 5, 0, 15, 11, 13, 10, 14, 12];
+    quick_sort(a4, 0, 15);
+    if (!is_sorted(a4, 16)) { return 9; }
+    if (a4[0] != 0) { return 10; }
+    if (a4[7] != 7) { return 11; }
+    if (a4[15] != 15) { return 12; }
+
+    define a5: uint8[16] = [9, 3, 7, 1, 8, 2, 6, 4, 5, 0, 15, 11, 13, 10, 14, 12];
+    heap_sort(a5, 16);
+    if (!is_sorted(a5, 16)) { return 13; }
+    if (a5[15] != 15) { return 14; }
+
+    define k: uint8 = 0;
+    define same: boolean = true;
+    while (k < 16) {
+        if (a1[k] != a4[k]) { same = false; }
+        if (a3[k] != a5[k]) { same = false; }
+        k += 1;
+    }
+    if (!same) { return 15; }
+
+    define empty: uint8[16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    insertion_sort(empty, 0);
+    if (!is_sorted(empty, 0)) { return 16; }
+    quick_sort(empty, 0, 0);
+    heap_sort(empty, 0);
+    if (!is_sorted(empty, 0)) { return 17; }
+
+    define one: uint8[16] = [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    quick_sort(one, 0, 0);
+    heap_sort(one, 1);
+    if (one[0] != 7) { return 18; }
+
+    define inc: uint8[16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    if (!is_sorted(inc, 16)) { return 19; }
+    quick_sort(inc, 0, 15);
+    if (!is_sorted(inc, 16)) { return 20; }
+
+    define dec: uint8[16] = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+    heap_sort(dec, 16);
+    if (!is_sorted(dec, 16)) { return 21; }
+    if (dec[0] != 0) { return 22; }
+
+    define flat: uint8[16] = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+    quick_sort(flat, 0, 15);
+    shell_sort(flat, 16);
+    if (!is_sorted(flat, 16)) { return 23; }
+    if (flat[0] != 5) { return 24; }
+
+    define part: uint8[16] = [8, 7, 6, 5, 4, 3, 2, 1, 99, 98, 97, 96, 95, 94, 93, 92];
+    insertion_sort(part, 8);
+    if (!is_sorted(part, 8)) { return 25; }
+    if (part[8] != 99) { return 26; }
+    if (part[15] != 92) { return 27; }
+
+    return 0;
+}

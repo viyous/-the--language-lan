@@ -1,0 +1,179 @@
+type Counter = { value: uint8[0, 100], step: uint8[0, 10] };
+
+define count_down(n: uint8[0, 8]) -> uint8[0, 8] {
+    define i: uint8 = n;
+    /** @oracle @invariant { i: [0, 8] } */
+    while (i > 0) { i -= 1; }
+    return i;
+}
+
+define bounded_sum(n: uint8[0, 8]) -> uint16 {
+    define i: uint8 = 0;
+    define total: uint16 = 0;
+    /** @oracle @invariant { i: [0, 8] } */
+    while (i < n && total < 1000) {
+        total += i as uint16;
+        i += 1;
+    }
+    return total;
+}
+
+define raise_value(c: Counter, times: uint8[0, 4]) -> uint8[0, 100] {
+    define i: uint8 = 0;
+    /** @oracle @invariant { c.value: [0, 100], i: [0, 4] } */
+    while (i < times) {
+        if (c.value <= 90) { c.value += 10; }
+        i += 1;
+    }
+    return c.value;
+}
+
+define meet_in_middle(n: uint8[0, 8]) -> uint8[0, 16] {
+    define i: uint8 = 0;
+    define j: uint8 = n;
+    /** @oracle @invariant { i: [0, 8], j: [0, 8] } */
+    while (i < j) {
+        i += 1;
+        j -= 1;
+    }
+    return i;
+}
+
+define pick(flag: boolean) -> uint8[0, 9] {
+    define x: uint8 = 0;
+    define run: boolean = true;
+    /** @oracle @transition => { x: [0, 9], run: [0, 1] } */
+    while (run) {
+        if (flag) { x = 5; } else { x = 9; }
+        run = false;
+    }
+    return x;
+}
+
+define forced() -> uint8[0, 9] {
+    define x: uint8 = 0;
+    define run: boolean = true;
+    /** @oracle @trusted @transition => { x: [0, 9], run: [0, 1] } */
+    while (run) {
+        x = 9;
+        run = false;
+    }
+    return x;
+}
+
+define step_until(c: Counter, limit: uint8[0, 4]) -> uint8[0, 100] {
+    define i: uint8 = 0;
+    define run: boolean = true;
+    /** @oracle @transition => { c.value: [0, 100], i: [0, 4], run: [0, 1] } */
+    while (run) {
+        if (i >= limit) { run = false; }
+        else {
+            if (c.value <= 90) { c.value += 10; }
+            i += 1;
+        }
+    }
+    return c.value;
+}
+
+define fill_two(flag: boolean) -> uint8 {
+    define data: uint8[4] = [0, 0, 0, 0];
+    define s = data[0, 4);
+    define run: boolean = true;
+    /** @oracle @ensures { state(s[0, 2)) := {7}; } */
+    while (run) {
+        if (flag) { s[0] = 7; s[1] = 7; }
+        else { s[0, 2) = 7; }
+        run = false;
+    }
+    return s[0] + s[1];
+}
+
+define fill_guarded(flag: boolean) -> uint8 {
+    define data: uint8[4] = [0, 0, 0, 0];
+    define s = data[0, 4);
+    define run: boolean = true;
+    /** @oracle @ensures {
+        when (flag) state(s[0, 2)) := {7};
+        when (!flag) state(s[0, 2)) := {8};
+    } */
+    while (run) {
+        if (flag) { s[0, 2) = 7; }
+        else { s[0, 2) = 8; }
+        run = false;
+    }
+    return s[0];
+}
+
+define fill_first(flag: boolean) -> uint8 {
+    define data: uint8[4] = [0, 0, 0, 0];
+    define s = data[0, 4);
+    define run: boolean = true;
+    /** @oracle @ensures { state(s[0]) := {3}; } */
+    while (run) {
+        s[0] = 3;
+        if (flag) { s[1] = 1; } else { s[1] = 2; }
+        run = false;
+    }
+    return s[0];
+}
+
+define count_steps(n: uint8[0, 16]) -> uint8[0, 16] {
+    define i: uint8 = n;
+    define steps: uint8 = 0;
+    /** @oracle @proof { decreases: i } */
+    while (i > 0 && steps < 16) {
+        i -= 1;
+        steps += 1;
+    }
+    return steps;
+}
+
+define double_steps(n: uint8[0, 8]) -> uint8[0, 8] {
+    define i: uint8 = n;
+    define steps: uint8 = 0;
+    /** @oracle @invariant { i: [0, 8], steps: [0, 8] } @proof { decreases: i } */
+    while (i > 0) {
+        i -= 1;
+        if (steps < 8) { steps += 1; }
+    }
+    return steps;
+}
+
+define main() -> int32 {
+
+    if (count_down(0) != 0) { return 1; }
+    if (count_down(5) != 0) { return 2; }
+    if (bounded_sum(0) != 0) { return 3; }
+    if (bounded_sum(5) != 10) { return 4; }
+    if (bounded_sum(8) != 28) { return 5; }
+    if (meet_in_middle(8) != 4) { return 6; }
+    if (meet_in_middle(0) != 0) { return 7; }
+
+    define c1: Counter = { value: 50, step: 10 };
+    if (raise_value(c1, 2) != 70) { return 8; }
+    if (c1.value != 70) { return 9; }
+    define c2: Counter = { value: 95, step: 10 };
+    if (raise_value(c2, 4) != 95) { return 10; }
+
+    if (pick(true) != 5) { return 11; }
+    if (pick(false) != 9) { return 12; }
+    if (forced() != 9) { return 13; }
+
+    define c3: Counter = { value: 10, step: 10 };
+    if (step_until(c3, 3) != 40) { return 14; }
+    define c4: Counter = { value: 95, step: 10 };
+    if (step_until(c4, 3) != 95) { return 15; }
+
+    if (fill_two(true) != 14) { return 16; }
+    if (fill_two(false) != 14) { return 17; }
+    if (fill_guarded(true) != 7) { return 18; }
+    if (fill_guarded(false) != 8) { return 19; }
+    if (fill_first(true) != 3) { return 20; }
+    if (fill_first(false) != 3) { return 21; }
+
+    if (count_steps(0) != 0) { return 22; }
+    if (count_steps(7) != 7) { return 23; }
+    if (double_steps(6) != 6) { return 24; }
+
+    return 0;
+}

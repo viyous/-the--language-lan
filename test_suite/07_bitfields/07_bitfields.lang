@@ -1,0 +1,160 @@
+define set_one(i: uint8[0, 15]) -> uint16 {
+    define bits: bit[16];
+    bits[i] = 1;
+    return bits[, ] as: view uint16;
+}
+
+define clear_one(i: uint8[0, 15]) -> uint16 {
+    define bits: bit[16] = [1; 16];
+    bits[i] = 0;
+    return bits[, ] as: view uint16;
+}
+
+define read_one(i: uint8[0, 15]) -> uint8[0, 1] {
+    define bits: bit[16] = [1; 16];
+    return bits[i];
+}
+
+define write_byte0(v: uint8) -> uint32 {
+    define reg: bit[32];
+    define fields = reg[
+        b0: uint8@bit(8, 0),
+        b1: uint8@bit(8, 8),
+        b2: uint8@bit(8, 16),
+        b3: uint8@bit(8, 24)
+    ];
+    fields.b0 = v;
+    return reg[, ] as: view uint32;
+}
+
+define read_byte2(v: uint32) -> uint8 {
+    define reg: bit[32] = v as: view bit[32];
+    define fields = reg[
+        b0: uint8@bit(8, 0),
+        b1: uint8@bit(8, 8),
+        b2: uint8@bit(8, 16),
+        b3: uint8@bit(8, 24)
+    ];
+    return fields.b2;
+}
+
+define set_flag(flag: boolean) -> uint8 {
+    define reg: bit[8];
+    define fields = reg[f: boolean@bit(1, 3)];
+    fields.f = flag;
+    return reg[, ] as: view uint8;
+}
+
+define mixed_width(value: uint16) -> uint16 {
+    define reg: bit[16];
+    define fields = reg[
+        low3: uint8@bit(3, 0),
+        full: uint16@bit(16, 0)
+    ];
+    fields.full = value;
+    return fields.full;
+}
+
+define byte_swap(v: uint16) -> uint16 {
+    define reg: bit[16];
+    define fields = reg[
+        be: uint16@bit(16, 0, endian: be),
+        le: uint16@bit(16, 0)
+    ];
+    fields.be = v;
+    return fields.le;
+}
+
+define byte_swap_alt(v: uint16) -> uint16 {
+    define reg: bit[16];
+    define fields = reg[
+        be: uint16@bit(16, 0){endian: be},
+        le: uint16@bit(16, 0){endian: le}
+    ];
+    fields.be = v;
+    return fields.le;
+}
+
+define byte_swap32(v: uint32) -> uint32 {
+    define reg: bit[32];
+    define fields = reg[
+        be: uint32@bit(32, 0, endian: be),
+        le: uint32@bit(32, 0)
+    ];
+    fields.be = v;
+    return fields.le;
+}
+
+define copy_nibble(src: uint8[0, 15]) -> uint8 {
+    define bits: bit[16];
+    bits[4, 8) = src;
+    bits[0, 4) = bits[4, 8);
+    return bits[0, 8) as: view uint8;
+}
+
+define join_nibbles(hi: uint8[0, 15], lo: uint8[0, 15]) -> uint8 {
+    define bits: bit[8];
+    bits[4, 8) = hi;
+    bits[0, 4) = lo;
+    return bits[, ] as: view uint8;
+}
+
+define roundtrip_word(v: uint16) -> uint16 {
+    define bits: bit[32];
+    bits[8, 24) = v;
+    return bits[8, 24) as: view uint16;
+}
+
+define row_window(i: uint8[0, 1], n: uint8[0, 7]) -> uint8[0, 1] {
+    define rows: bit[16][3];
+    rows[i][n, n + 4) = 15;
+    rows[i + 1][n, n + 4) = rows[i][n, n + 4);
+    return rows[i + 1][n];
+}
+
+define copy_row(i: uint8[0, 1]) -> uint16 {
+    define rows: bit[16][3];
+    rows[i][0, 16) = 0xABCD;
+    rows[i + 1][0, 16) = rows[i][0, 16);
+    return rows[i + 1][, ] as: view uint16;
+}
+
+define width_of_byte() -> uint32 {
+    define b: bit[8];
+    return b.len as uint32;
+}
+
+define width_of_word() -> uint32 {
+    define w: bit[32];
+    return w.len as uint32;
+}
+
+define main() -> int32 {
+    if (set_one(0) != 1) { return 1; }
+    if (set_one(15) != 0x8000) { return 2; }
+    if (clear_one(0) != 0xFFFE) { return 3; }
+    if (clear_one(15) != 0x7FFF) { return 4; }
+    if (read_one(3) == 0) { return 5; }
+
+    if (write_byte0(0xAB) != 0xAB) { return 6; }
+    if (read_byte2(0x00FF0000) != 0xFF) { return 7; }
+    if (set_flag(true) != 0x08) { return 8; }
+    if (set_flag(false) != 0x00) { return 9; }
+    if (mixed_width(0x1234) != 0x1234) { return 10; }
+
+    if (byte_swap(0x1234) != 0x3412) { return 11; }
+    if (byte_swap_alt(0x1234) != 0x3412) { return 12; }
+    if (byte_swap32(0x12345678) != 0x78563412) { return 13; }
+
+    if (copy_nibble(0x0A) != 0xAA) { return 14; }
+    if (join_nibbles(0x0A, 0x05) != 0xA5) { return 15; }
+    if (roundtrip_word(0xABCD) != 0xABCD) { return 16; }
+
+    if (row_window(0, 4) == 0) { return 17; }
+    if (copy_row(0) != 0xABCD) { return 18; }
+
+    if (width_of_byte() != 8) { return 19; }
+    if (width_of_word() != 32) { return 20; }
+
+    return 0;
+}

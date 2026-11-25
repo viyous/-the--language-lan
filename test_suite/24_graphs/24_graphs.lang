@@ -1,0 +1,195 @@
+type Node = { payload: uint8, next: Node | null, alt: Node | null };
+
+define peek_next(n: Node) -> uint8 {
+    if (n.next != null) { return n.next.payload; }
+    return n.payload;
+}
+
+define sum_next(n: Node) -> uint32 {
+    define total: uint32 = 0;
+    define cur: Node · {pass: alias, immutable: true} = n;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 8 && total < 10000) {
+        total += cur.payload as uint32;
+        if (cur.next == null) { walking = false; }
+        else {
+            define nx: Node · {pass: alias, immutable: true} = cur.next;
+            cur = nx;
+            steps += 1;
+        }
+    }
+    return total;
+}
+
+define depth(n: Node) -> uint8[0, 8] {
+    define cur: Node · {pass: alias, immutable: true} = n;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 8) {
+        if (cur.next == null) { walking = false; }
+        else {
+            define nx: Node · {pass: alias, immutable: true} = cur.next;
+            cur = nx;
+            steps += 1;
+        }
+    }
+    return steps;
+}
+
+define max_of_both(n: Node) -> uint8 {
+    define best: uint8 = n.payload;
+    if (n.next != null) {
+        define a: uint8 = n.next.payload;
+        if (a > best) { best = a; }
+    }
+    if (n.alt != null) {
+        define b: uint8 = n.alt.payload;
+        if (b > best) { best = b; }
+    }
+    return best;
+}
+
+define walk_fork(n: Node) -> uint32 {
+    define total: uint32 = 0;
+    define cur: Node · {pass: alias, immutable: true} = n;
+    define steps: uint8 = 0;
+    define walking = true;
+    while (walking && steps < 8 && total < 10000) {
+        total += cur.payload as uint32;
+        if (cur.next != null) {
+            define nx: Node · {pass: alias, immutable: true} = cur.next;
+            cur = nx;
+        } else {
+            if (cur.alt == null) { walking = false; }
+            else {
+                define na: Node · {pass: alias, immutable: true} = cur.alt;
+                cur = na;
+            }
+        }
+        if (walking) { steps += 1; }
+    }
+    return total;
+}
+
+define bump(n: Node) -> void {
+    if (n.payload <= 90) { n.payload += 10; }
+}
+
+define bump_self(n: Node) -> void {
+    n.payload = 100;
+}
+
+define cut_alt(n: Node) -> void {
+    n.alt = null;
+}
+
+define cut_next(n: Node) -> void {
+    if (n.next != null) { n.next.next = null; }
+    n.next = null;
+}
+
+define link_alt(n: Node,
+               donor: Node) -> void {
+    n.alt = donor;
+}
+
+define paint_and_link(n: Node,
+                     donor: Node) -> void {
+    n.payload = 100;
+    if (n.next != null) { n.next.alt = donor; }
+}
+
+define main() -> int32 {
+
+    define d: Node = { payload: 4 };
+    define c: Node = { payload: 3 };
+    define b: Node = { payload: 2 };
+    define a: Node = { payload: 1 };
+    c.next = d;
+    b.next = d;
+    a.next = b;
+    a.alt = c;
+
+    if (peek_next(a) != 2) { return 1; }
+
+    if (depth(a) != 2) { return 2; }
+
+    if (max_of_both(a) != 3) { return 3; }
+
+    if (sum_next(a) != 7) { return 4; }
+
+    if (walk_fork(a) != 7) { return 5; }
+
+    define s: Node = { payload: 5 };
+    s.next = s;
+    if (peek_next(s) != 5) { return 6; }
+    if (depth(s) != 8) { return 7; }
+    if (sum_next(s) != 40) { return 8; }
+
+    define p: Node = { payload: 6 };
+    define q: Node = { payload: 7 };
+    p.next = q;
+    q.next = p;
+    if (peek_next(p) != 7) { return 9; }
+    if (depth(p) != 8) { return 10; }
+
+    define w: Node = { payload: 10 };
+    bump(w);
+    if (w.payload != 20) { return 11; }
+    bump(w);
+    if (w.payload != 30) { return 12; }
+    bump_self(w);
+    if (w.payload != 100) { return 13; }
+
+    define hi: Node = { payload: 95 };
+    bump(hi);
+    if (hi.payload != 95) { return 14; }
+
+    define g1: Node = { payload: 1 };
+    define g2: Node = { payload: 2 };
+    g1.alt = g2;
+    if (max_of_both(g1) != 2) { return 15; }
+    cut_alt(g1);
+    if (g1.alt != null) { return 16; }
+    if (max_of_both(g1) != 1) { return 17; }
+
+    define h1: Node = { payload: 1 };
+    define h2: Node = { payload: 2 };
+    define h3: Node = { payload: 3 };
+    h2.next = h3;
+    h1.next = h2;
+    if (depth(h1) != 2) { return 18; }
+    cut_next(h1);
+    if (h1.next != null) { return 19; }
+    if (depth(h1) != 0) { return 20; }
+
+    define r1: Node = { payload: 8 };
+    define donor: Node = { payload: 9 };
+    link_alt(r1, donor);
+    if (r1.alt == null) { return 21; }
+    if (max_of_both(r1) != 9) { return 22; }
+
+    define r2: Node = { payload: 5 };
+    define old_d: Node = { payload: 6 };
+    define new_d: Node = { payload: 7 };
+    link_alt(r2, old_d);
+    if (max_of_both(r2) != 6) { return 23; }
+    cut_alt(r2);
+    if (r2.alt != null) { return 24; }
+    link_alt(r2, new_d);
+    if (max_of_both(r2) != 7) { return 25; }
+
+    // 载荷写与 attach 并存：标量字段随便改，拓扑仍由 attach 描述。
+    define p1: Node = { payload: 1 };
+    define p2: Node = { payload: 2 };
+    define p_donor: Node = { payload: 3 };
+    p1.next = p2;
+    paint_and_link(p1, p_donor);
+    if (p1.payload != 100) { return 26; }
+    if (p2.payload != 2) { return 27; }
+    if (p2.alt != p_donor) { return 28; }
+    if (max_of_both(p1) != 100) { return 29; }
+
+    return 0;
+}

@@ -1,0 +1,134 @@
+define split_zero(x: uint8) -> uint8 {
+    assert x: {
+        [x == 0] => uint8 & {0},
+        [x != 0] => uint8 \ {0}
+    };
+    return x;
+}
+
+define split_halves(x: uint8) -> uint8 {
+    assert x: {
+        [x < 128] => uint8[0, 127],
+        [x >= 128] => uint8[128, 255]
+    };
+    return x;
+}
+
+define split_with_wildcard(x: uint8) -> uint8 {
+    assert x: {
+        [x < 10] => uint8[0, 9],
+        [_] => uint8
+    };
+    return x;
+}
+
+type Box = { value: uint8, tag: uint8 };
+
+define split_field(b: Box) -> uint8 {
+    assert b.value: {
+        [b.value == 0] => uint8 & {0},
+        [b.value != 0] => uint8 \ {0}
+    };
+    return b.value;
+}
+
+define split_two_fields(b: Box) -> uint8 {
+    assert b.value: {
+        [b.value < 100] => uint8[0, 99],
+        [b.value >= 100] => uint8[100, 255]
+    };
+    assert b.tag: {
+        [b.tag == 1] => uint8 & {1},
+        [b.tag != 1] => uint8
+    };
+    return b.value;
+}
+
+define verify_refined(x: uint8[0, 9]) -> uint8 {
+    assert x: {
+        [x < 5] => uint8[0, 4],
+        [x >= 5] => uint8[5, 9]
+    };
+    return x;
+}
+
+define verify_nonzero(x: uint8 \ {0}) -> uint8 {
+    assert x: {
+        [x != 0] => uint8 \ {0}
+    };
+    return x;
+}
+
+define split_quarters(x: uint8) -> uint8 {
+    assert x: {
+        [x < 64] => uint8[0, 63],
+        [x >= 64 && x < 128] => uint8[64, 127],
+        [x >= 128 && x < 192] => uint8[128, 191],
+        [x >= 192] => uint8[192, 255]
+    };
+    return x;
+}
+
+define classify_guard(x: uint8) -> uint8 {
+    assert x: {
+        [x < 10] => uint8[0, 9],
+        [x >= 10 && x < 100] => uint8[10, 99],
+        [x >= 100] => uint8[100, 255]
+    };
+    if (x < 10) { return 0; }
+    if (x < 100) { return 1; }
+    return 2;
+}
+
+define guarded_ratio(a: uint8, b: uint8 \ {0}) -> uint8 {
+    assert b: {
+        [b != 0] => uint8 \ {0}
+    };
+    return a / b;
+}
+
+define guarded_scale(x: uint8[0, 9]) -> uint8[0, 90] {
+    assert x: {
+        [x <= 9] => uint8[0, 9]
+    };
+    return x * 10;
+}
+
+define main() -> int32 {
+    if (split_zero(0) != 0) { return 1; }
+    if (split_zero(255) != 255) { return 2; }
+
+    if (split_halves(0) != 0) { return 3; }
+    if (split_halves(127) != 127) { return 4; }
+    if (split_halves(128) != 128) { return 5; }
+    if (split_halves(255) != 255) { return 6; }
+
+    if (split_with_wildcard(5) != 5) { return 7; }
+    if (split_with_wildcard(200) != 200) { return 8; }
+
+    define box: Box = { value: 0, tag: 1 };
+    if (split_field(box) != 0) { return 9; }
+
+    define box2: Box = { value: 150, tag: 2 };
+    if (split_two_fields(box2) != 150) { return 10; }
+
+    if (verify_refined(9) != 9) { return 11; }
+    if (verify_nonzero(1) != 1) { return 12; }
+    if (verify_nonzero(255) != 255) { return 13; }
+
+    if (split_quarters(0) != 0) { return 14; }
+    if (split_quarters(63) != 63) { return 15; }
+    if (split_quarters(64) != 64) { return 16; }
+    if (split_quarters(191) != 191) { return 17; }
+    if (split_quarters(192) != 192) { return 18; }
+    if (split_quarters(255) != 255) { return 19; }
+
+    if (classify_guard(5) != 0) { return 20; }
+    if (classify_guard(50) != 1) { return 21; }
+    if (classify_guard(150) != 2) { return 22; }
+
+    if (guarded_ratio(100, 4) != 25) { return 23; }
+    if (guarded_scale(9) != 90) { return 24; }
+
+    return 0;
+}

@@ -1,0 +1,217 @@
+define fnv1a(data: uint8[16], n: uint8[0, 16]) -> uint32 {
+    define h: uint32 = 2166136261;
+    define i: uint8 = 0;
+    while (i < n) {
+        h = h ^ (data[i] as uint32);
+        h = (h * 16777619) as: wrap uint32;
+        i += 1;
+    }
+    return h;
+}
+
+define poly_hash(data: uint8[16], n: uint8[0, 16]) -> uint32 {
+    define h: uint32 = 0;
+    define i: uint8 = 0;
+    while (i < n && h < 100000000) {
+        h = h * 31 + (data[i] as uint32);
+        i += 1;
+    }
+    return h;
+}
+
+define slot_of(k: uint8) -> uint8[0, 15] {
+    define wide: uint16 = (k as uint16) * 5 + 3;
+    define r: uint16 = wide % 16;
+    return r as uint8;
+}
+
+define bit_of(k: uint8, m: uint8, c: uint8) -> uint8[0, 63] {
+    define wide: uint32 = (k as uint32) * (m as uint32) + (c as uint32);
+    define r: uint32 = wide % 64;
+    return r as uint8;
+}
+
+define table_insert(keys: uint8[16], state: uint8[16], k: uint8) -> boolean {
+    define start: uint8[0, 15] = slot_of(k);
+    define i: uint8 = 0;
+    while (i < 16) {
+        define idx16: uint16 = ((start as uint16) + (i as uint16)) % 16;
+        define idx: uint8[0, 15] = idx16 as uint8;
+        if (state[idx] == 0) {
+            keys[idx] = k;
+            state[idx] = 1;
+            return true;
+        }
+        if (state[idx] == 1 && keys[idx] == k) { return true; }
+        i += 1;
+    }
+    return false;
+}
+
+define table_find(keys: uint8[16], state: uint8[16], k: uint8) -> boolean {
+    define start: uint8[0, 15] = slot_of(k);
+    define i: uint8 = 0;
+    while (i < 16) {
+        define idx16: uint16 = ((start as uint16) + (i as uint16)) % 16;
+        define idx: uint8[0, 15] = idx16 as uint8;
+        if (state[idx] == 0) { return false; }
+        if (state[idx] == 1 && keys[idx] == k) { return true; }
+        i += 1;
+    }
+    return false;
+}
+
+define table_remove(keys: uint8[16], state: uint8[16], k: uint8) -> boolean {
+    define start: uint8[0, 15] = slot_of(k);
+    define i: uint8 = 0;
+    while (i < 16) {
+        define idx16: uint16 = ((start as uint16) + (i as uint16)) % 16;
+        define idx: uint8[0, 15] = idx16 as uint8;
+        if (state[idx] == 0) { return false; }
+        if (state[idx] == 1 && keys[idx] == k) {
+            state[idx] = 2;
+            return true;
+        }
+        i += 1;
+    }
+    return false;
+}
+
+define table_size(state: uint8[16]) -> uint8[0, 16] {
+    define n: uint8 = 0;
+    define i: uint8 = 0;
+    while (i < 16) {
+        if (state[i] == 1) { n += 1; }
+        i += 1;
+    }
+    return n;
+}
+
+define table_tombstones(state: uint8[16]) -> uint8[0, 16] {
+    define n: uint8 = 0;
+    define i: uint8 = 0;
+    while (i < 16) {
+        if (state[i] == 2) { n += 1; }
+        i += 1;
+    }
+    return n;
+}
+
+define table_probes(keys: uint8[16], state: uint8[16]) -> uint16 {
+    define total: uint16 = 0;
+    define i: uint8 = 0;
+    while (i < 16 && total < 60000) {
+        if (state[i] == 1) {
+            define start: uint8[0, 15] = slot_of(keys[i]);
+            define d: uint16 = ((i as uint16) + 16 - (start as uint16)) % 16;
+            total += d + 1;
+        }
+        i += 1;
+    }
+    return total;
+}
+
+define bloom_add(bits: bit[64], k: uint8) -> void {
+    bits[bit_of(k, 7, 1)] = 1;
+    bits[bit_of(k, 13, 5)] = 1;
+    bits[bit_of(k, 31, 11)] = 1;
+}
+
+define bloom_has(bits: bit[64], k: uint8) -> boolean {
+    define a: boolean = (bits[bit_of(k, 7, 1)] == 1);
+    define b: boolean = (bits[bit_of(k, 13, 5)] == 1);
+    define c: boolean = (bits[bit_of(k, 31, 11)] == 1);
+    return a && b && c;
+}
+
+define bloom_count(bits: bit[64]) -> uint8[0, 64] {
+    define n: uint8 = 0;
+    define i: uint8 = 0;
+    while (i < 64) {
+        if (bits[i] == 1) { n += 1; }
+        i += 1;
+    }
+    return n;
+}
+
+define main() -> int32 {
+
+    define empty: uint8[16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    if (fnv1a(empty, 0) != 2166136261) { return 1; }
+
+    define abc: uint8[16] = [97, 98, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    define h1: uint32 = fnv1a(abc, 3);
+    if (h1 == 0) { return 2; }
+    if (fnv1a(abc, 3) != h1) { return 3; }
+    if (fnv1a(abc, 2) == h1) { return 4; }
+
+    if (poly_hash(abc, 1) != 97) { return 5; }
+    if (poly_hash(abc, 2) != 97 * 31 + 98) { return 6; }
+    if (poly_hash(empty, 0) != 0) { return 7; }
+
+    if (slot_of(0) != 3) { return 8; }
+    if (slot_of(16) != 3) { return 9; }
+    if (slot_of(1) != 8) { return 10; }
+    if (slot_of(100) != slot_of(100)) { return 11; }
+
+    define keys: uint8[16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    define state: uint8[16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    define n: uint8 = 0;
+    while (n < 10) {
+        if (!table_insert(keys, state, n)) { return 12; }
+        n += 1;
+    }
+    if (table_size(state) != 10) { return 13; }
+    if (table_tombstones(state) != 0) { return 14; }
+
+    define m: uint8 = 0;
+    while (m < 10) {
+        if (!table_find(keys, state, m)) { return 15; }
+        m += 1;
+    }
+
+    if (table_find(keys, state, 10)) { return 16; }
+    if (table_find(keys, state, 200)) { return 17; }
+
+    if (!table_insert(keys, state, 5)) { return 18; }
+    if (table_size(state) != 10) { return 19; }
+
+    if (!table_remove(keys, state, 3)) { return 20; }
+    if (table_size(state) != 9) { return 21; }
+    if (table_tombstones(state) != 1) { return 22; }
+    if (table_find(keys, state, 3)) { return 23; }
+    if (!table_find(keys, state, 4)) { return 24; }
+    if (!table_find(keys, state, 8)) { return 25; }
+
+    if (table_remove(keys, state, 200)) { return 26; }
+
+    if (!table_insert(keys, state, 3)) { return 27; }
+    if (!table_find(keys, state, 3)) { return 28; }
+    if (table_size(state) != 10) { return 29; }
+
+    define probes: uint16 = table_probes(keys, state);
+    if (probes < 10) { return 30; }
+    if (probes > 30) { return 31; }
+
+    define bits: bit[64];
+    if (bloom_has(bits, 7)) { return 32; }
+    bloom_add(bits, 7);
+    if (!bloom_has(bits, 7)) { return 33; }
+    if (bloom_count(bits) == 0) { return 34; }
+    if (bloom_count(bits) > 3) { return 35; }
+
+    define p: uint8 = 0;
+    while (p < 8) {
+        bloom_add(bits, p);
+        p += 1;
+    }
+    define q: uint8 = 0;
+    while (q < 8) {
+        if (!bloom_has(bits, q)) { return 36; }
+        q += 1;
+    }
+
+    if (bloom_count(bits) > 24) { return 37; }
+
+    return 0;
+}

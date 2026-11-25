@@ -1,0 +1,282 @@
+define popcount8(x: uint8) -> uint8[0, 8] {
+    define v: uint8 = x;
+    define n: uint8 = 0;
+    while (v != 0 && n < 8) {
+        v = v & (v - 1);
+        n += 1;
+    }
+    return n;
+}
+
+define popcount32(x: uint32) -> uint8[0, 32] {
+    define v: uint32 = x;
+    define n: uint8 = 0;
+    while (v != 0 && n < 32) {
+        v = v & (v - 1);
+        n += 1;
+    }
+    return n;
+}
+
+define popcount64(x: uint64) -> uint8[0, 64] {
+    define v: uint64 = x;
+    define n: uint8 = 0;
+    while (v != 0 && n < 64) {
+        v = v & (v - 1);
+        n += 1;
+    }
+    return n;
+}
+
+define popcount_swar(x: uint32) -> uint8[0, 32] {
+    define v: uint32 = x;
+    v = (v - ((v >> 1) & 0x55555555)) as: wrap uint32;
+    v = ((v & 0x33333333) + ((v >> 2) & 0x33333333)) as: wrap uint32;
+    v = ((v + (v >> 4)) & 0x0F0F0F0F) as: wrap uint32;
+    v = ((v * 0x01010101) >> 24) as: wrap uint32;
+
+    define n: uint8 = (v & 0xFF) as uint8;
+    if (n > 32) { return 32; }
+    return n;
+}
+
+define clz8(x: uint8) -> uint8[0, 8] {
+    define v: uint8 = x;
+    define n: uint8 = 0;
+    while (v != 0 && n < 8) {
+        v = v >> 1;
+        n += 1;
+    }
+    return 8 - n;
+}
+
+define ctz8(x: uint8) -> uint8[0, 8] {
+    if (x == 0) { return 8; }
+    define v: uint8 = x;
+    define n: uint8 = 0;
+    while (v != 0 && n < 8 && (v & 1) == 0) {
+        v = v >> 1;
+        n += 1;
+    }
+    return n;
+}
+
+define clz32(x: uint32) -> uint8[0, 32] {
+    define v: uint32 = x;
+    define n: uint8 = 0;
+    while (v != 0 && n < 32) {
+        v = v >> 1;
+        n += 1;
+    }
+    return 32 - n;
+}
+
+define reverse8(x: uint8) -> uint8 {
+    define src: uint8 = x;
+    define r: uint16[0, 255] = 0;
+    define i: uint8 = 0;
+    while (i < 8) {
+        define low: uint16 = (src as uint16) & 1;
+
+        r = ((r << 1) | low) & 0xFF;
+        src = src >> 1;
+        i += 1;
+    }
+    return r as uint8;
+}
+
+define reverse8_swar(x: uint8) -> uint8 {
+    define v: uint16 = x as uint16;
+    v = ((v >> 1) & 0x55) | ((v & 0x55) << 1);
+    v = ((v >> 2) & 0x33) | ((v & 0x33) << 2);
+    v = (v >> 4) | (v << 4);
+    return (v & 0xFF) as uint8;
+}
+
+define gray8(x: uint8) -> uint8 {
+    return x ^ (x >> 1);
+}
+
+define ungray8(x: uint8) -> uint8 {
+    define v: uint8 = x;
+    v = v ^ (v >> 1);
+    v = v ^ (v >> 2);
+    v = v ^ (v >> 4);
+    return v;
+}
+
+define is_pow2(x: uint16) -> boolean {
+    if (x == 0) { return false; }
+    define v: uint16 = x - 1;
+    return (x & v) == 0;
+}
+
+define next_pow2(x: uint16) -> uint16 {
+    define v: uint32 = x as uint32;
+    if (v == 0) { return 1; }
+    v -= 1;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v += 1;
+    return v as: sat uint16;
+}
+
+define lowbit8(x: uint8) -> uint8 {
+    define wide: uint16 = x as uint16;
+    define neg: uint16 = ((~x) as uint16) + 1;
+    return (wide & neg) as uint8;
+}
+
+define parity8(x: uint8) -> boolean {
+    define v: uint8 = x;
+    v = v ^ (v >> 4);
+    v = v ^ (v >> 2);
+    v = v ^ (v >> 1);
+    return (v & 1) != 0;
+}
+
+define rotl8(x: uint8, k: uint8[0, 7]) -> uint8 {
+    define wide: uint16 = x as uint16;
+    define hi: uint16 = (wide << k) & 0xFF;
+    define lo: uint16 = wide >> (8 - k);
+    return (hi | lo) as uint8;
+}
+
+define rotr8(x: uint8, k: uint8[0, 7]) -> uint8 {
+    define wide: uint16 = x as uint16;
+    define lo: uint16 = wide >> k;
+    define hi: uint16 = (wide << (8 - k)) & 0xFF;
+    return (lo | hi) as uint8;
+}
+
+define swap_bits8(x: uint8, i: uint8[0, 7], j: uint8[0, 7]) -> uint8 {
+    define bi: uint8 = (x >> i) & 1;
+    define bj: uint8 = (x >> j) & 1;
+    if (bi == bj) { return x; }
+    define mi: uint8 = (1 as uint8) << i;
+    define mj: uint8 = (1 as uint8) << j;
+    return x ^ mi ^ mj;
+}
+
+define bitset_count(b: bit[64]) -> uint8[0, 64] {
+    define n: uint8 = 0;
+    define i: uint8 = 0;
+    while (i < 64) {
+        if (b[i] == 1) { n += 1; }
+        i += 1;
+    }
+    return n;
+}
+
+define first_set(b: bit[64]) -> uint8[0, 64] {
+    define i: uint8 = 0;
+    while (i < 64) {
+        if (b[i] == 1) { return i; }
+        i += 1;
+    }
+    return 64;
+}
+
+define flip_range(b: bit[64], lo: uint8[0, 63], hi: uint8[0, 64]) -> void {
+    define i: uint8 = lo;
+    while (i < hi && i < 64) {
+        b[i] ^= @1;
+        i += 1;
+    }
+}
+
+define main() -> int32 {
+
+    if (popcount8(0) != 0) { return 1; }
+    if (popcount8(0xFF) != 8) { return 2; }
+    if (popcount8(0x0F) != 4) { return 3; }
+    if (popcount8(0xA5) != 4) { return 4; }
+    if (popcount32(0xFFFFFFFF) != 32) { return 5; }
+    if (popcount32(0x80000001) != 2) { return 6; }
+    if (popcount64(0xFFFFFFFFFFFFFFFF) != 64) { return 7; }
+
+    if (popcount_swar(0xA5) != 4) { return 8; }
+    if (popcount_swar(0xFFFFFFFF) != 32) { return 9; }
+    if (popcount_swar(0x12345678) != 13) { return 10; }
+
+    if (clz8(0) != 8) { return 11; }
+    if (clz8(1) != 7) { return 12; }
+    if (clz8(0x80) != 0) { return 13; }
+    if (ctz8(0) != 8) { return 14; }
+    if (ctz8(1) != 0) { return 15; }
+    if (ctz8(0x80) != 7) { return 16; }
+    if (ctz8(0x08) != 3) { return 17; }
+    if (clz32(1) != 31) { return 18; }
+    if (clz32(0x80000000) != 0) { return 19; }
+
+    if (reverse8(0x01) != 0x80) { return 20; }
+    if (reverse8(0x80) != 0x01) { return 21; }
+    if (reverse8(0xA5) != 0xA5) { return 22; }
+    if (reverse8(0) != 0) { return 23; }
+    if (reverse8(0x0F) != 0xF0) { return 24; }
+    if (reverse8_swar(0x01) != 0x80) { return 25; }
+    if (reverse8_swar(0x0F) != 0xF0) { return 26; }
+    if (reverse8_swar(0xA5) != 0xA5) { return 27; }
+
+    define g: uint8 = 0;
+    define ok: boolean = true;
+    while (g < 255) {
+        if (ungray8(gray8(g)) != g) { ok = false; }
+        g += 1;
+    }
+    if (!ok) { return 28; }
+    if (gray8(0) != 0) { return 29; }
+    if (gray8(1) != 1) { return 30; }
+    if (gray8(2) != 3) { return 31; }
+    if (gray8(3) != 2) { return 32; }
+
+    if (is_pow2(0)) { return 33; }
+    if (!is_pow2(1)) { return 34; }
+    if (!is_pow2(64)) { return 35; }
+    if (is_pow2(96)) { return 36; }
+    if (next_pow2(0) != 1) { return 37; }
+    if (next_pow2(1) != 1) { return 38; }
+    if (next_pow2(5) != 8) { return 39; }
+    if (next_pow2(64) != 64) { return 40; }
+    if (next_pow2(65) != 128) { return 41; }
+    if (next_pow2(1000) != 1024) { return 42; }
+
+    if (lowbit8(0) != 0) { return 43; }
+    if (lowbit8(1) != 1) { return 44; }
+    if (lowbit8(12) != 4) { return 45; }
+    if (lowbit8(0x80) != 0x80) { return 46; }
+
+    if (parity8(0)) { return 47; }
+    if (!parity8(1)) { return 48; }
+    if (parity8(3)) { return 49; }
+    if (!parity8(7)) { return 50; }
+
+    if (rotl8(0x81, 1) != 0x03) { return 51; }
+    if (rotr8(0x81, 1) != 0xC0) { return 52; }
+    if (rotl8(0xA5, 0) != 0xA5) { return 53; }
+    if (rotr8(0xA5, 0) != 0xA5) { return 54; }
+    if (rotl8(0xA5, 4) != rotr8(0xA5, 4)) { return 55; }
+
+    if (swap_bits8(0b00000001, 0, 7) != 0b10000000) { return 56; }
+    if (swap_bits8(0b00000011, 0, 1) != 0b00000011) { return 57; }
+    if (swap_bits8(0, 3, 5) != 0) { return 58; }
+
+    define b: bit[64];
+    if (bitset_count(b) != 0) { return 59; }
+    if (first_set(b) != 64) { return 60; }
+    b[0] = 1;
+    b[63] = 1;
+    if (bitset_count(b) != 2) { return 61; }
+    if (first_set(b) != 0) { return 62; }
+    b[0] = 0;
+    if (first_set(b) != 63) { return 63; }
+
+    flip_range(b, 60, 64);
+
+    if (bitset_count(b) != 3) { return 64; }
+    if (first_set(b) != 60) { return 65; }
+
+    return 0;
+}

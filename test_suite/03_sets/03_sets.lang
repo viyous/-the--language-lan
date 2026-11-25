@@ -1,0 +1,124 @@
+type Digit = uint8 & {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+type Vowel = uint8 & {65, 69, 73, 79, 85, 97, 101, 105, 111, 117};
+
+type NonZero = uint8 \ {0};
+
+type Small = (uint8 & {1, 2, 3}) | (uint8 & {7, 8, 9});
+
+type EvenDigit = Digit & {0, 2, 4, 6, 8};
+
+type BigDigit = Digit \ {0, 1};
+
+define is_digit(c: uint8) -> boolean {
+    return c in Digit;
+}
+
+define is_vowel(c: uint8) -> boolean {
+    return c in Vowel;
+}
+
+define is_small(x: uint8) -> boolean {
+    return x in Small;
+}
+
+define is_even_digit(x: uint8) -> boolean {
+    return x in EvenDigit;
+}
+
+define to_value(c: Digit) -> Digit {
+    return c;
+}
+
+define increment(x: Small) -> uint8 {
+    return x + 1;
+}
+
+define decrement_nonzero(x: NonZero) -> uint8 {
+    return x - 1;
+}
+
+define double_even_digit(x: EvenDigit) -> uint8[0, 16] {
+    return x * 2;
+}
+
+define vowel_index(c: uint8) -> uint8[0, 5] {
+    if (c == 65) { return 0; }
+    if (c == 69) { return 1; }
+    if (c == 73) { return 2; }
+    if (c == 79) { return 3; }
+    if (c == 85) { return 4; }
+    return 5;
+}
+
+define digit_parity(c: Digit) -> uint8[0, 1] {
+    if (c == 0) { return 0; }
+    if (c == 1) { return 1; }
+    if (c == 2) { return 0; }
+    if (c == 3) { return 1; }
+    if (c == 4) { return 0; }
+    if (c == 5) { return 1; }
+    if (c == 6) { return 0; }
+    if (c == 7) { return 1; }
+    if (c == 8) { return 0; }
+    return 1;
+}
+
+define count_even_digits() -> uint8[0, 10] {
+    define i: uint8 = 0;
+    define total: uint8 = 0;
+    while (i < 10) {
+        if (is_even_digit(i)) {
+            total += 1;
+        }
+        i += 1;
+    }
+    return total;
+}
+
+define count_vowels(s: ascii_string) -> uint8[0, 255] {
+    define i: uint32 = 0;
+    define total: uint16 = 0;
+    while (i < s.len && i < 255) {
+        if (is_vowel(s[i] as uint8)) {
+            total += 1;
+        }
+        i += 1;
+    }
+    return total as uint8;
+}
+
+define main() -> int32 {
+    if (!is_digit(9)) { return 1; }
+    if (is_digit(10)) { return 2; }
+
+    if (!is_vowel(65)) { return 3; }
+    if (is_vowel(66)) { return 4; }
+    if (!is_vowel(101)) { return 21; }
+
+    if (!is_small(1)) { return 5; }
+    if (!is_small(9)) { return 6; }
+    if (is_small(5)) { return 7; }
+
+    if (!is_even_digit(4)) { return 8; }
+    if (is_even_digit(5)) { return 9; }
+
+    if (to_value(7) != 7) { return 10; }
+    if (increment(9) != 10) { return 11; }
+    if (decrement_nonzero(1) != 0) { return 12; }
+    if (double_even_digit(8) != 16) { return 13; }
+
+    if (vowel_index(65) != 0) { return 14; }
+    if (vowel_index(85) != 4) { return 15; }
+    if (vowel_index(66) != 5) { return 16; }
+
+    if (digit_parity(0) != 0) { return 17; }
+    if (digit_parity(9) != 1) { return 18; }
+
+    if (count_even_digits() != 5) { return 19; }
+
+    define text: ascii_string = "hello world";
+    if (count_vowels(text) != 3) { return 20; }
+
+    return 0;
+}

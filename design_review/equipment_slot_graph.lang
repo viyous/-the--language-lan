@@ -1,0 +1,112 @@
+// A dense storage example with ten slots and 64 interned item keys.
+// A zero cell has no key; a one cell has a disabled key; two means enabled.
+type Entry = uint8[0, 2];
+type ItemKey = uint8[0, 63];
+type SlotKey = uint8[0, 9];
+type SlotView = Entry[..] · {len: {64}};
+type Equipment = Entry[..] · {len: {640}};
+
+define register_item(slot: SlotView, key: ItemKey) -> boolean {
+    if (slot[key] != 0) { return false; }
+    slot[key] = 1;
+    return true;
+}
+
+define apply_slot_reply(slot: SlotView, keys: ItemKey[..], picks: boolean[..],
+                        single: boolean) -> boolean {
+    if (keys.len != picks.len) { return false; }
+    define accepted = false;
+    define i: uint32 = 0;
+    while (i < keys.len) {
+        define active = picks[i];
+        if (single && active) {
+            if (accepted) { active = false; }
+            else { accepted = true; }
+        }
+        define key = keys[i];
+        if (active) { slot[key] = 2; }
+        else { slot[key] = 1; }
+        i += 1;
+    }
+    return true;
+}
+
+define read_through_another_key(slot: SlotView, first: ItemKey, second: ItemKey) -> uint8[2, 2] {
+    if (first != second) { return 2; }
+    slot[first] = 2;
+    return slot[second];
+}
+
+define preserve_other_slot(equipment: Equipment, first: SlotKey, second: SlotKey,
+                           key: ItemKey) -> uint8[2, 2] {
+    if (first == second) { return 2; }
+    define selected = equipment[first * 64, first * 64 + 64);
+    define other = equipment[second * 64, second * 64 + 64);
+    selected[key] = 2;
+    other[key] = 1;
+    return selected[key];
+}
+
+define preserve_unwritten_key(slot: SlotView, keys: ItemKey[..], watched: ItemKey) -> uint8[2, 2] {
+    if (slot[watched] != 2) { return 2; }
+    define i: uint32 = 0;
+    while (i < keys.len) {
+        define key = keys[i];
+        if (key != watched) { slot[key] = 1; }
+        i += 1;
+    }
+    return slot[watched];
+}
+
+// The selected position varies by exit, but the number of enabled keys does not.
+define replace_with_one(slot: SlotView, first: boolean) -> void {
+    slot[0,) = 1;
+    if (first) { slot[0] = 2; }
+    else { slot[1] = 2; }
+}
+
+define replace_and_count(equipment: Equipment, first: SlotKey, second: SlotKey,
+                         key: ItemKey, select_first: boolean) -> uint8[1, 1] {
+    if (first == second) { return 1; }
+    define selected = equipment[first * 64, first * 64 + 64);
+    define other = equipment[second * 64, second * 64 + 64);
+    replace_with_one(selected, select_first);
+    other[key] = 2;
+    return selected.count({2});
+}
+
+// The footprints of the two writes overlap. Only the guard separates the keys.
+define enable_two(slot: SlotView, first: ItemKey, second: ItemKey) -> void {
+    if (first != second) {
+        slot[first] = 2;
+        slot[second] = 2;
+        return;
+    }
+    slot[0] = 2;
+    slot[1] = 2;
+}
+
+type EquipmentPage = { slots: Entry[64], version: uint8 };
+type Badge = { state: Entry, serial: uint16 };
+type Row = { badge: Badge, locked: boolean };
+type Cabinet = { rows: Row[64], version: uint8 };
+
+// Write through a view of the record's inline storage.
+define replace_page_selection(page: EquipmentPage, first: boolean) -> void {
+    define slots = page.slots[0, 64);
+    slots[0,) = 1;
+    if (first) { slots[0] = 2; }
+    else { slots[1] = 2; }
+}
+
+// After selection one edited badge is enabled. The optional final write
+// clears it again. The other 62 rows can already be enabled on entry.
+define select_badge(cabinet: Cabinet, first: boolean, clear_selected: boolean) -> void {
+    define selected: Row · {pass: alias} = cabinet.rows[0];
+    define other: Row · {pass: alias} = cabinet.rows[1];
+    selected.badge.state = 0;
+    other.badge.state = 0;
+    if (!first) { selected = cabinet.rows[1]; }
+    selected.badge.state = 2;
+    if (clear_selected) { selected.badge.state = 0; }
+}

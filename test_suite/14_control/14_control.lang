@@ -1,0 +1,217 @@
+define classify(x: uint8) -> uint8 {
+    if (x < 10) { return 0; }
+    if (x < 100) { return 1; }
+    return 2;
+}
+
+define quadrant(x: int32, y: int32) -> uint8 {
+    if (x > 0) {
+        if (y > 0) { return 1; }
+        if (y < 0) { return 4; }
+        return 0;
+    }
+    if (x < 0) {
+        if (y > 0) { return 2; }
+        if (y < 0) { return 3; }
+        return 0;
+    }
+    return 0;
+}
+
+define safe_div(a: uint8, b: uint8) -> uint8 {
+    if (b != 0 && a / b > 0) {
+        return a / b;
+    }
+    return 0;
+}
+
+define demorgan(a: boolean, b: boolean) -> boolean {
+    define left: boolean = !(a && b);
+    define right: boolean = !a || !b;
+    return left == right;
+}
+
+define sum_to(n: uint16[0, 1000]) -> uint32[0, 499500] {
+    define total: uint32 = 0;
+    define i: uint16 = 0;
+    while (i < n) {
+        total += i as uint32;
+        i += 1;
+    }
+    return total;
+}
+
+define first_multiple_of_seven(limit: uint8[1, 200]) -> uint8 {
+    define i: uint8 = 7;
+    while (i < limit) {
+        if (i % 7 == 0) {
+            return i;
+        }
+        i += 1;
+    }
+    return 0;
+}
+
+define sum_even(limit: uint8[0, 200]) -> uint32 {
+    define total: uint32 = 0;
+    define i: uint8 = 0;
+    while (i < limit) {
+        if (i % 2 == 1) {
+            i += 1;
+            continue;
+        }
+        total += i as uint32;
+        i += 1;
+    }
+    return total;
+}
+
+define count_until(limit: uint8[1, 200], target: uint32) -> uint8 {
+    define total: uint32 = 0;
+    define count: uint8 = 0;
+    define counting = true;
+    while (counting && count < limit) {
+        total += count;
+        count += 1;
+        if (total >= target) { counting = false; }
+    }
+    return count;
+}
+
+define count_even_cells(n: uint8[0, 50], m: uint8[0, 50]) -> uint16 {
+    define total: uint16 = 0;
+    define i: uint8 = 0;
+    while (i < n) {
+        define j: uint8 = 0;
+        while (j < m && total < 65000) {
+            if ((i + j) % 2 == 0) {
+                total += 1;
+            }
+            j += 1;
+        }
+        i += 1;
+    }
+    return total;
+}
+
+define find_row(grid: uint8[4][3], target: uint8) -> uint8 {
+    define i: uint8 = 0;
+    while (i < 3) {
+        define j: uint8 = 0;
+        while (j < 4) {
+            if (grid[i][j] == target) {
+                return i;
+            }
+            j += 1;
+        }
+        i += 1;
+    }
+    return 255;
+}
+
+define bubble_sort(a: uint8[8]) -> void {
+    define pass: uint8 = 0;
+    while (pass < 7) {
+        define i: uint8 = 0;
+        while (i < 7) {
+            if (a[i] > a[i + 1]) {
+                define tmp: uint8 = a[i];
+                a[i] = a[i + 1];
+                a[i + 1] = tmp;
+            }
+            i += 1;
+        }
+        pass += 1;
+    }
+}
+
+define linear_search(a: uint8[8], target: uint8) -> uint8 {
+    define i: uint8 = 0;
+    while (i < 8) {
+        if (a[i] == target) {
+            return i;
+        }
+        i += 1;
+    }
+    return 255;
+}
+
+define cycle_states(steps: uint8[0, 100]) -> uint8[0, 3] {
+    define state: uint8 = 0;
+    define i: uint8 = 0;
+    while (i < steps) {
+        if (state == 3) {
+            state = 0;
+        } else {
+            state += 1;
+        }
+        i += 1;
+    }
+    return state;
+}
+
+define accumulate_safely(limit: uint8[1, 100]) -> uint16 {
+    define total: uint16 = 0;
+    define i: uint8 = 0;
+    while (i < limit && total < 60000) {
+        total += 1000;
+        i += 1;
+    }
+    return total;
+}
+
+define main() -> int32 {
+
+    if (classify(5) != 0) { return 1; }
+    if (classify(50) != 1) { return 2; }
+    if (classify(200) != 2) { return 3; }
+
+    if (quadrant(1, 1) != 1) { return 4; }
+    if (quadrant(-1, 1) != 2) { return 5; }
+    if (quadrant(-1, -1) != 3) { return 6; }
+    if (quadrant(1, -1) != 4) { return 7; }
+    if (quadrant(0, 5) != 0) { return 8; }
+
+    if (safe_div(10, 0) != 0) { return 9; }
+    if (safe_div(10, 2) != 5) { return 10; }
+
+    if (!demorgan(true, false)) { return 11; }
+    if (!demorgan(false, false)) { return 12; }
+    if (!demorgan(true, true)) { return 13; }
+
+    if (sum_to(10) != 45) { return 14; }
+    if (sum_to(0) != 0) { return 15; }
+    if (sum_to(100) != 4950) { return 16; }
+    if (sum_to(1000) != 499500) { return 34; }
+
+    if (first_multiple_of_seven(100) != 7) { return 17; }
+    if (sum_even(10) != 20) { return 18; }
+
+    if (count_until(100, 10) != 5) { return 19; }
+
+    if (count_even_cells(4, 4) != 8) { return 20; }
+
+    define grid: uint8[4][3];
+    grid[2][1] = 42;
+    if (find_row(grid, 42) != 2) { return 21; }
+    if (find_row(grid, 43) != 255) { return 22; }
+
+    define data: uint8[8] = [5, 3, 8, 1, 9, 2, 7, 4];
+    bubble_sort(data);
+    if (data[0] != 1) { return 23; }
+    if (data[7] != 9) { return 24; }
+    if (data[3] != 4) { return 25; }
+
+    if (linear_search(data, 7) != 5) { return 26; }
+    if (linear_search(data, 100) != 255) { return 27; }
+
+    if (cycle_states(0) != 0) { return 28; }
+    if (cycle_states(3) != 3) { return 29; }
+    if (cycle_states(4) != 0) { return 30; }
+    if (cycle_states(7) != 3) { return 31; }
+
+    if (accumulate_safely(10) != 10000) { return 32; }
+    if (accumulate_safely(100) != 60000) { return 33; }
+
+    return 0;
+}

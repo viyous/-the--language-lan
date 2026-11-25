@@ -1,0 +1,99 @@
+type Pt = { x: uint8, y: uint8 };
+type Cell = { value: uint8, next: Cell | null };
+type Wrapper = { inner: Pt, tag: uint8 };
+
+define same_addr(a: Pt, b: Pt) -> boolean { return a ===@0 b; }
+
+define same_value(a: Pt, b: Pt) -> boolean { return a ===@1 b; }
+
+define differ(a: Pt, b: Pt) -> boolean { return a !==@1 b; }
+
+define same_wrapper(a: Wrapper, b: Wrapper) -> boolean { return a ===@1 b; }
+
+define same_two(a: Cell, b: Cell) -> boolean {
+    return a ===@2 b;
+}
+
+define same_three(a: Cell, b: Cell) -> boolean {
+    return a ===@3 b;
+}
+
+define differ_three(a: Cell, b: Cell) -> boolean {
+    return a !==@3 b;
+}
+
+define same_rows(a: Pt[4], b: Pt[4]) -> boolean {
+    return a[0, 4) ===@1 b[0, 4);
+}
+
+define same_prefix(a: Pt[4], b: Pt[4]) -> boolean {
+    return a[0, 2) ===@1 b[0, 2);
+}
+
+define value_after_check(a: Pt, b: Pt) -> uint16[0, 510] {
+    if (a ===@1 b) {
+        return (a.x as uint16) + (b.x as uint16);
+    }
+    return 0;
+}
+
+define length_differs(a: Pt[4], b: Pt[4]) -> boolean {
+    return a[0, 2) !==@1 b[0, 3);
+}
+
+define main() -> int32 {
+
+    define p: Pt = { x: 1, y: 2 };
+    define q: Pt = { x: 1, y: 2 };
+    define r: Pt = { x: 1, y: 3 };
+
+    if (!same_addr(p, p)) { return 1; }
+    if (same_addr(p, q)) { return 2; }
+    if (!same_value(p, q)) { return 3; }
+    if (same_value(p, r)) { return 4; }
+    if (!differ(p, r)) { return 5; }
+    if (differ(p, q)) { return 6; }
+
+    define w1: Wrapper = { inner: { x: 4, y: 5 }, tag: 1 };
+    define w2: Wrapper = { inner: { x: 4, y: 5 }, tag: 1 };
+    define w3: Wrapper = { inner: { x: 4, y: 5 }, tag: 2 };
+    if (!same_wrapper(w1, w2)) { return 7; }
+    if (same_wrapper(w1, w3)) { return 8; }
+
+    define s1: Cell = { value: 1 };
+    define s2: Cell = { value: 2 };
+    define s3: Cell = { value: 3 };
+    define t1: Cell = { value: 1 };
+    s2.next = s3;
+    s1.next = s2;
+    t1.next = s2;
+    assert chain(head: s1 -> tail: null);
+    assert chain(head: t1 -> tail: null);
+    if (!same_two(s1, t1)) { return 9; }
+    if (!same_three(s1, t1)) { return 10; }
+    if (differ_three(s1, t1)) { return 11; }
+
+    define u1: Cell = { value: 1 };
+    define u2: Cell = { value: 2 };
+    define u3: Cell = { value: 3 };
+    u2.next = u3;
+    u1.next = u2;
+    assert chain(head: u1 -> tail: null);
+    if (same_two(s1, u1)) { return 12; }
+
+    if (!same_three(s1, u1)) { return 13; }
+    if (differ_three(s1, u1)) { return 14; }
+
+    define ra: Pt[4] = [{ x: 1, y: 2 }, { x: 3, y: 4 }, { x: 5, y: 6 }, { x: 7, y: 8 }];
+    define rb: Pt[4] = [{ x: 1, y: 2 }, { x: 3, y: 4 }, { x: 5, y: 6 }, { x: 7, y: 8 }];
+    define rc: Pt[4] = [{ x: 1, y: 2 }, { x: 3, y: 4 }, { x: 5, y: 6 }, { x: 7, y: 9 }];
+    if (!same_rows(ra, rb)) { return 15; }
+    if (same_rows(ra, rc)) { return 16; }
+    if (!same_prefix(ra, rc)) { return 17; }
+    if (!length_differs(ra, rb)) { return 18; }
+
+    if (value_after_check(p, q) != 2) { return 19; }
+    if (value_after_check(p, r) != 0) { return 20; }
+
+    return 0;
+}

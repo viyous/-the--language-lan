@@ -1,0 +1,221 @@
+import {
+    Actor, Frame, Matrix4, Inventory, ItemSlot,
+    Camera, Light, Scene, Vec2, Vec3, Rgb, Span
+} from "../shared/shared.lang";
+
+define zero_actor() -> uint16 {
+    define a: Actor;
+    return a.health;
+}
+
+define partial_actor() -> uint32 {
+    define a: Actor = { health: 100 };
+    return (a.health as uint32) + (a.armor as uint32);
+}
+
+define make_actor() -> Actor {
+    define a: Actor = {
+        id: 1,
+        level: 10,
+        health: 100,
+        health_max: 100,
+        mana: 50,
+        mana_max: 50,
+        armor: 20,
+        attack: 30,
+        defense: 15,
+        gold: 500,
+        alive: true
+    };
+    return a as: copy;
+}
+
+define damage(a: Actor, amount: uint16) -> void {
+    define cur: uint16 = a.health;
+    define diff: int32 = (cur as int32) - (amount as int32);
+    a.health = diff as: sat uint16;
+    if (diff <= 0) {
+        a.alive = false;
+    }
+}
+
+define heal(a: Actor, amount: uint16) -> void {
+    define cur: uint16 = a.health;
+    define limit: uint16 = a.health_max;
+    define sum: uint32 = (cur as uint32) + (amount as uint32);
+    define capped: uint16 = sum as: sat uint16;
+    if (capped > limit) {
+        a.health = limit;
+    } else {
+        a.health = capped;
+    }
+}
+
+define add_gold(a: Actor, amount: uint32) -> void {
+    define sum: uint64 = (a.gold as uint64) + (amount as uint64);
+    a.gold = sum as: sat uint32;
+}
+
+define power_score(a: Actor) -> uint32 {
+    return (a.attack as uint32) + (a.defense as uint32) + (a.armor as uint32);
+}
+
+define total_resist(a: Actor) -> uint16 {
+    return (a.fire_resist as uint16) + (a.ice_resist as uint16) + (a.shock_resist as uint16)
+         + (a.poison_resist as uint16) + (a.holy_resist as uint16) + (a.dark_resist as uint16);
+}
+
+define position_sum(a: Actor) -> int64 {
+    return (a.position.x as int64) + (a.position.y as int64) + (a.position.z as int64);
+}
+
+define move_by(a: Actor, dx: int32) -> void {
+    define sum: int64 = (a.position.x as int64) + (dx as int64);
+    a.position.x = sum as: sat int32;
+}
+
+define eye_x(s: Scene) -> int32 {
+    return s.camera.eye.x;
+}
+
+define set_eye_x(s: Scene, v: int32) -> void {
+    s.camera.eye.x = v;
+}
+
+define camera_fov(s: Scene) -> uint16 {
+    return s.camera.fov;
+}
+
+define light_red(s: Scene) -> uint8 {
+    return s.key_light.color.r;
+}
+
+define slot_count(inv: Inventory, i: uint8[0, 7]) -> uint8 {
+    return inv.slots[i].count;
+}
+
+define set_slot(inv: Inventory, i: uint8[0, 7], id: uint16, count: uint8) -> void {
+    inv.slots[i].item_id = id;
+    inv.slots[i].count = count;
+}
+
+define total_items(inv: Inventory) -> uint16 {
+    return (inv.slots[0].count as uint16) + (inv.slots[1].count as uint16)
+         + (inv.slots[2].count as uint16) + (inv.slots[3].count as uint16)
+         + (inv.slots[4].count as uint16) + (inv.slots[5].count as uint16)
+         + (inv.slots[6].count as uint16) + (inv.slots[7].count as uint16);
+}
+
+define find_item(inv: Inventory, id: uint16) -> uint8 {
+    define i: uint8 = 0;
+    while (i < 8) {
+        if (inv.slots[i].item_id == id) {
+            return i;
+        }
+        i += 1;
+    }
+    return 255;
+}
+
+define trace(m: Matrix4) -> int64 {
+    return (m.m00 as int64) + (m.m11 as int64) + (m.m22 as int64) + (m.m33 as int64);
+}
+
+define identity() -> Matrix4 {
+    define m: Matrix4 = { m00: 1, m11: 1, m22: 1, m33: 1 };
+    return m as: copy;
+}
+
+define translation(x: int32, y: int32, z: int32) -> Matrix4 {
+    define m: Matrix4 = { m00: 1, m11: 1, m22: 1, m33: 1, m03: x, m13: y, m23: z };
+    return m as: copy;
+}
+
+define set_flag(f: Frame, bit_index: uint8[0, 7], on: boolean) -> void {
+    f.flags[bit_index] = on as uint8;
+}
+
+define read_flag(f: Frame, bit_index: uint8[0, 7]) -> boolean {
+    return f.flags[bit_index] == 1;
+}
+
+define payload_sum(f: Frame) -> uint16 {
+    define total: uint16 = 0;
+    define i: uint8 = 0;
+    while (i < 16 && total < 65000) {
+        total += f.payload[i] as uint16;
+        i += 1;
+    }
+    return total;
+}
+
+define set_payload(f: Frame, i: uint8[0, 15], v: uint8) -> void {
+    f.payload[i] = v;
+}
+
+define main() -> int32 {
+
+    if (zero_actor() != 0) { return 1; }
+    if (partial_actor() != 100) { return 2; }
+
+    define hero: Actor = make_actor();
+    if (hero.health != 100) { return 3; }
+    if (hero.level != 10) { return 4; }
+    if (!hero.alive) { return 5; }
+
+    damage(hero, 30);
+    if (hero.health != 70) { return 6; }
+
+    heal(hero, 10);
+    if (hero.health != 80) { return 7; }
+
+    heal(hero, 100);
+    if (hero.health != 100) { return 8; }
+
+    add_gold(hero, 250);
+    if (hero.gold != 750) { return 9; }
+
+    damage(hero, 200);
+    if (hero.health != 0 || hero.alive) { return 10; }
+
+    define warrior: Actor = make_actor();
+    if (power_score(warrior) != 65) { return 11; }
+    if (total_resist(warrior) != 0) { return 12; }
+
+    if (position_sum(warrior) != 0) { return 13; }
+    move_by(warrior, 5);
+    if (warrior.position.x != 5) { return 14; }
+
+    define scene: Scene;
+    if (eye_x(scene) != 0) { return 15; }
+    set_eye_x(scene, 42);
+    if (eye_x(scene) != 42) { return 16; }
+    if (camera_fov(scene) != 0) { return 17; }
+    if (light_red(scene) != 0) { return 18; }
+
+    define inv: Inventory;
+    set_slot(inv, 0, 100, 3);
+    set_slot(inv, 1, 200, 5);
+    if (slot_count(inv, 0) != 3) { return 19; }
+    if (total_items(inv) != 8) { return 20; }
+    if (find_item(inv, 200) != 1) { return 21; }
+    if (find_item(inv, 999) != 255) { return 22; }
+
+    define eye: Matrix4 = identity();
+    if (trace(eye) != 4) { return 23; }
+
+    define move: Matrix4 = translation(1, 2, 3);
+    if (trace(move) != 4) { return 24; }
+    if (move.m03 != 1 || move.m13 != 2 || move.m23 != 3) { return 25; }
+
+    define frame: Frame;
+    set_flag(frame, 3, true);
+    if (!read_flag(frame, 3)) { return 26; }
+    if (read_flag(frame, 4)) { return 27; }
+
+    set_payload(frame, 0, 10);
+    set_payload(frame, 1, 20);
+    if (payload_sum(frame) != 30) { return 28; }
+
+    return 0;
+}

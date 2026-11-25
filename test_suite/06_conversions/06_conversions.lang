@@ -1,0 +1,163 @@
+define widen_u8(x: uint8) -> uint16 {
+    return x;
+}
+
+define widen_u16(x: uint16) -> uint32 {
+    return x;
+}
+
+define widen_u32(x: uint32) -> uint64 {
+    return x;
+}
+
+define widen_i8(x: int8) -> int16 {
+    return x;
+}
+
+define widen_i32(x: int32) -> int64 {
+    return x;
+}
+
+define u8_to_i16(x: uint8) -> int16 {
+    return x as int16;
+}
+
+define wrap_u32_u8(x: uint32) -> uint8 {
+    return x as: wrap uint8;
+}
+
+define wrap_u64_u16(x: uint64) -> uint16 {
+    return x as: wrap uint16;
+}
+
+define wrap_i32_u8(x: int32) -> uint8 {
+    return x as: wrap uint8;
+}
+
+define sat_u32_u8(x: uint32) -> uint8 {
+    return x as: sat uint8;
+}
+
+define sat_i32_i8(x: int32) -> int8 {
+    return x as: sat int8;
+}
+
+define sat_u16_i8(x: uint16) -> int8 {
+    return x as: sat int8;
+}
+
+define trap_narrow(x: uint16[0, 200]) -> uint8 {
+    return x as: trap uint8;
+}
+
+define trap_signed(x: int32[0, 100]) -> int8 {
+    return x as: trap int8;
+}
+
+define i16_to_u16(x: int16) -> uint16 {
+    return x as: view uint16;
+}
+
+define u16_to_i16(x: uint16) -> int16 {
+    return x as: view int16;
+}
+
+define u16_to_bits(x: uint16) -> bit[16] {
+    return x as: view bit[16];
+}
+
+define bits_to_u16(b: bit[16]) -> uint16 {
+    return b as: view uint16;
+}
+
+define u32_to_bits(x: uint32) -> bit[32] {
+    return x as: view bit[32];
+}
+
+type Pair = { left: uint8, right: uint16 };
+type Nested = { inner: Pair, tag: uint8 };
+
+define copy_pair(p: Pair) -> Pair {
+    define copy: Pair = p as: copy;
+    return copy as: copy;
+}
+
+define copy_nested(n: Nested) -> Nested {
+    define copy: Nested = n as: copy;
+    return copy as: copy;
+}
+
+define independent_copy(p: Pair) -> uint16 {
+    define copy: Pair = p as: copy;
+    copy.right = 999;
+    return p.right;
+}
+
+define bool_to_u8(b: boolean) -> uint8 {
+    return b as uint8;
+}
+
+define bool_to_i32(b: boolean) -> int32 {
+    return b as int32;
+}
+
+define low16_as_signed(x: uint32) -> int16 {
+    define low: uint16 = x as: wrap uint16;
+    return low as: view int16;
+}
+
+define low_byte_of_negative(x: int16) -> uint8 {
+    define raw: uint16 = x as: view uint16;
+    return raw as: wrap uint8;
+}
+
+define main() -> int32 {
+
+    if (widen_u8(255) != 255) { return 1; }
+    if (widen_u16(65535) != 65535) { return 2; }
+    if (widen_u32(4294967295) != 4294967295) { return 3; }
+    if (widen_i8(-128) != -128) { return 4; }
+    if (widen_i32(-100000) != -100000) { return 5; }
+    if (u8_to_i16(200) != 200) { return 6; }
+
+    if (wrap_u32_u8(0x1234) != 0x34) { return 7; }
+    if (wrap_u64_u16(0x12345678) != 0x5678) { return 8; }
+    if (wrap_i32_u8(-1) != 0xFF) { return 9; }
+
+    if (sat_u32_u8(1000) != 255) { return 10; }
+    if (sat_i32_i8(1000) != 127) { return 11; }
+    if (sat_i32_i8(-1000) != -128) { return 12; }
+    if (sat_u16_i8(200) != 127) { return 13; }
+
+    if (trap_narrow(200) != 200) { return 14; }
+    if (trap_signed(100) != 100) { return 15; }
+
+    if (i16_to_u16(-1) != 65535) { return 16; }
+    if (u16_to_i16(65535) != -1) { return 17; }
+
+    define bits: bit[16] = u16_to_bits(0x1234);
+    if (bits[4] == 0) { return 18; }
+    if (bits[0] == 1) { return 19; }
+    if (bits_to_u16(bits) != 0x1234) { return 20; }
+
+    define wide: bit[32] = u32_to_bits(0xDEADBEEF);
+    if (!wide[0]) { return 21; }
+
+    define p: Pair = { left: 7, right: 700 };
+    if (copy_pair(p).right != 700) { return 22; }
+    if (independent_copy(p) != 700) { return 23; }
+
+    define n: Nested = { inner: { left: 1, right: 2 }, tag: 3 };
+    define nc: Nested = copy_nested(n);
+    if (nc.inner.right != 2 || nc.tag != 3) { return 24; }
+
+    if (bool_to_u8(true) != 1) { return 25; }
+    if (bool_to_u8(false) != 0) { return 26; }
+    if (bool_to_i32(true) != 1) { return 27; }
+
+    if (low16_as_signed(0xFFFF) != -1) { return 28; }
+    if (low16_as_signed(0x0001) != 1) { return 29; }
+    if (low_byte_of_negative(-1) != 0xFF) { return 30; }
+
+    return 0;
+}

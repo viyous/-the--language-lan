@@ -1,0 +1,140 @@
+define window8(i: uint8[0, 120]) -> uint8 {
+    define bits: bit[128];
+    bits[i, i + 8) = 0xA5;
+    return bits[i, i + 8) as: view uint8;
+}
+
+define window64(i: uint8[0, 8]) -> uint64 {
+    define bits: bit[128];
+    bits[8 * i, 8 * i + 64) = 18446744073709551615;
+    bits[8 * i + 63, 8 * i + 64) = 0;
+    return bits[8 * i, 8 * i + 64) as: view uint64;
+}
+
+define window16(i: uint8[0, 112]) -> uint16 {
+    define bits: bit[128];
+    bits[i, i + 16) = 0x1234;
+    return bits[i, i + 16) as: view uint16;
+}
+
+define window32(i: uint8[0, 96]) -> uint32 {
+    define bits: bit[128];
+    bits[i, i + 32) = 0xDEADBEEF;
+    return bits[i, i + 32) as: view uint32;
+}
+
+define variable_window(i: uint8[0, 7], n: uint8[1, 6]) -> uint8 {
+    define bits: bit[16] = [1; 16];
+    bits[i, i + n) = 1;
+    bits[i + 3, i + 5) = 3;
+    return bits[i, i + 8) as: view uint8;
+}
+
+define write_then_read(i: uint8[0, 7], v: uint8[0, 15]) -> uint8 {
+    define bits: bit[16];
+    bits[i, i + 4) = v;
+    return bits[i, i + 8) as: view uint8;
+}
+
+define shift_copy(i: uint8[0, 120]) -> uint8 {
+    define bits: bit[128] = [1; 128];
+    bits[i + 2, i + 6) = 2;
+    bits[i, i + 4) = 5;
+    return bits[i, i + 8) as: view uint8;
+}
+
+define disjoint_copy(i: uint8[0, 112]) -> uint8 {
+    define bits: bit[128];
+    bits[i, i + 4) = 9;
+    bits[i + 8, i + 12) = bits[i, i + 4);
+    return bits[i + 8, i + 16) as: view uint8;
+}
+
+define far_copy(i: uint8[0, 100]) -> uint8 {
+    define bits: bit[128];
+    bits[i, i + 8) = 0x5A;
+    bits[i + 16, i + 24) = bits[i, i + 8);
+    return bits[i + 16, i + 24) as: view uint8;
+}
+
+define slide_fill() -> uint8 {
+    define bits: bit[32];
+    define i: uint8 = 0;
+    while (i < 28) {
+        bits[i, i + 4) = 0x0F;
+        i += 1;
+    }
+    return bits[0, 8) as: view uint8;
+}
+
+define stride_write() -> uint32 {
+    define bits: bit[32];
+    define i: uint8 = 0;
+    while (i < 4) {
+        bits[8 * i, 8 * i + 8) = i;
+        i += 1;
+    }
+    return bits[, ] as: view uint32;
+}
+
+define roundtrip8(v: uint8, i: uint8[0, 120]) -> uint8 {
+    define bits: bit[128];
+    bits[i, i + 8) = v;
+    return bits[i, i + 8) as: view uint8;
+}
+
+define roundtrip16(v: uint16, i: uint8[0, 112]) -> uint16 {
+    define bits: bit[128];
+    bits[i, i + 16) = v;
+    return bits[i, i + 16) as: view uint16;
+}
+
+define roundtrip32(v: uint32, i: uint8[0, 96]) -> uint32 {
+    define bits: bit[128];
+    bits[i, i + 32) = v;
+    return bits[i, i + 32) as: view uint32;
+}
+
+define roundtrip64(v: uint64, i: uint8[0, 64]) -> uint64 {
+    define bits: bit[128];
+    bits[i, i + 64) = v;
+    return bits[i, i + 64) as: view uint64;
+}
+
+define main() -> int32 {
+    if (window8(0) != 0xA5) { return 1; }
+    if (window8(64) != 0xA5) { return 2; }
+    if (window8(120) != 0xA5) { return 3; }
+
+    if (window16(0) != 0x1234) { return 4; }
+    if (window16(112) != 0x1234) { return 5; }
+
+    if (window32(0) != 0xDEADBEEF) { return 6; }
+    if (window32(96) != 0xDEADBEEF) { return 7; }
+
+    if (window64(0) != 0x7FFFFFFFFFFFFFFF) { return 8; }
+    if (window64(8) != 0x7FFFFFFFFFFFFFFF) { return 9; }
+
+    if (write_then_read(0, 15) != 15) { return 10; }
+    if (write_then_read(4, 9) != 9) { return 11; }
+
+    if (variable_window(0, 6) != variable_window(0, 6)) { return 12; }
+
+    if (shift_copy(0) != shift_copy(0)) { return 13; }
+    if (disjoint_copy(8) != 9) { return 14; }
+    if (far_copy(0) != 0x5A) { return 15; }
+
+    if (slide_fill() != 0xFF) { return 16; }
+    if (stride_write() != 0x03020100) { return 17; }
+
+    if (roundtrip8(0x5A, 0) != 0x5A) { return 18; }
+    if (roundtrip8(0x5A, 120) != 0x5A) { return 19; }
+    if (roundtrip16(0x1234, 0) != 0x1234) { return 20; }
+    if (roundtrip16(0x1234, 112) != 0x1234) { return 21; }
+    if (roundtrip32(0xDEADBEEF, 0) != 0xDEADBEEF) { return 22; }
+    if (roundtrip32(0xDEADBEEF, 96) != 0xDEADBEEF) { return 23; }
+    if (roundtrip64(0x0123456789ABCDEF, 0) != 0x0123456789ABCDEF) { return 24; }
+    if (roundtrip64(0x0123456789ABCDEF, 64) != 0x0123456789ABCDEF) { return 25; }
+
+    return 0;
+}

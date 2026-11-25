@@ -1,0 +1,163 @@
+type Seq = uint8[16];
+
+define sat32(x: int32) -> int32[-200000, 200000] {
+    if (x > 200000) { return 200000; }
+    if (x < -200000) { return -200000; }
+    return x as int32[-200000, 200000];
+}
+
+define sat600(x: uint16) -> uint16[0, 600] {
+    if (x > 600) { return 600; }
+    return x as uint16[0, 600];
+}
+
+define knap_item(dp: uint16[0, 600][17], w: uint8, v: uint8[0, 60], cap: uint8[0, 16]) {
+    define c: uint8[0, 17] = cap + 1;
+    while (c > 0) {
+        c -= 1;
+        if (c >= w) {
+            define cand: uint16[0, 600] = sat600(dp[c - w] + v);
+            if (cand > dp[c]) { dp[c] = cand; }
+        }
+    }
+}
+
+define knapsack(weights: uint8[8], values: uint8[0, 60][8], n: uint8[0, 8], cap: uint8[0, 16]) -> uint16[0, 600] {
+    define dp: uint16[0, 600][17] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    define i: uint8 = 0;
+    while (i < n) {
+        define w: uint8 = weights[i];
+        define v: uint8[0, 60] = values[i];
+        knap_item(dp, w, v, cap);
+        i += 1;
+    }
+    return dp[cap];
+}
+
+define coin_item(dp: uint16[0, 100][17], coin: uint8, amount: uint8[0, 16]) {
+
+    define c: uint8 = coin;
+    while (c <= amount && c < 17) {
+
+        define alt: uint16[0, 101] = dp[c - coin] + 1;
+        if (alt <= 100 && alt < dp[c]) {
+            dp[c] = alt;
+        }
+        c += 1;
+    }
+}
+
+define coin_change(coins: uint8[8], ncoins: uint8[0, 8], amount: uint8[0, 16]) -> uint16[0, 100] {
+    define dp: uint16[0, 100][17] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    define i: uint8 = 1;
+    while (i <= amount && i < 17) {
+        dp[i] = 99;
+        i += 1;
+    }
+    define k: uint8 = 0;
+    while (k < ncoins) {
+        define coin: uint8 = coins[k];
+        coin_item(dp, coin, amount);
+        k += 1;
+    }
+    return dp[amount];
+}
+
+define kadane(a: int16[-1000, 1000][16], n: uint8[0, 16]) -> int32[-200000, 200000] {
+    if (n == 0) { return 0; }
+    define best: int32[-200000, 200000] = -200000;
+    define cur: int32[-200000, 200000] = 0;
+    define i: uint8 = 0;
+    while (i < n) {
+        define x: int32 = a[i] as int32;
+        define ext: int32 = cur + x;
+        if (ext < x) {
+            cur = sat32(x);
+        } else {
+            cur = sat32(ext);
+        }
+        if (cur > best) { best = cur; }
+        i += 1;
+    }
+    return best;
+}
+
+define unique_paths(rows: uint8[1, 8], cols: uint8[1, 8]) -> uint16[0, 3500] {
+    define dp: uint16[0, 3500][8] = [0, 0, 0, 0, 0, 0, 0, 0];
+    define j: uint8 = 0;
+    while (j < cols && j < 8) {
+        dp[j] = 1;
+        j += 1;
+    }
+    define i: uint8 = 1;
+    while (i < rows && i < 8) {
+        define k: uint8 = 1;
+        while (k < cols && k < 8) {
+            define s: uint32 = (dp[k] as uint32) + (dp[k - 1] as uint32);
+            if (s > 3500) {
+                dp[k] = 3500;
+            } else {
+                dp[k] = s as uint16[0, 3500];
+            }
+            k += 1;
+        }
+        i += 1;
+    }
+    return dp[cols - 1];
+}
+
+define main() -> int32 {
+
+    define wt: uint8[8] = [1, 2, 3, 4, 5, 6, 7, 8];
+    define vl: uint8[0, 60][8] = [10, 20, 30, 40, 50, 60, 60, 60];
+    if (knapsack(wt, vl, 8, 8) != 80) { return 1; }
+
+    if (knapsack(wt, vl, 8, 0) != 0) { return 2; }
+
+    define heavy: uint8[8] = [20, 20, 20, 20, 20, 20, 20, 20];
+    if (knapsack(heavy, vl, 8, 8) != 0) { return 3; }
+
+    if (knapsack(wt, vl, 4, 4) != 40) { return 4; }
+
+    define wt2: uint8[8] = [2, 3, 4, 5, 0, 0, 0, 0];
+    define vl2: uint8[0, 60][8] = [3, 4, 5, 6, 0, 0, 0, 0];
+    if (knapsack(wt2, vl2, 4, 5) != 7) { return 5; }
+
+    define coins: uint8[8] = [1, 5, 6, 0, 0, 0, 0, 0];
+    if (coin_change(coins, 3, 9) != 4) { return 6; }
+    if (coin_change(coins, 3, 0) != 0) { return 7; }
+    if (coin_change(coins, 3, 1) != 1) { return 8; }
+    if (coin_change(coins, 3, 5) != 1) { return 9; }
+    if (coin_change(coins, 3, 6) != 1) { return 10; }
+    if (coin_change(coins, 3, 11) != 2) { return 11; }
+    if (coin_change(coins, 3, 12) != 2) { return 12; }
+
+    define only4: uint8[8] = [4, 0, 0, 0, 0, 0, 0, 0];
+    if (coin_change(only4, 1, 6) != 99) { return 13; }
+    if (coin_change(only4, 1, 8) != 2) { return 14; }
+
+    define ka: int16[-1000, 1000][16] = [-2, 1, -3, 4, -1, 2, 1, -5, 4, 0, 0, 0, 0, 0, 0, 0];
+    if (kadane(ka, 9) != 6) { return 15; }
+
+    define kb: int16[-1000, 1000][16] = [-5, -3, -9, -1, -7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    if (kadane(kb, 5) != -1) { return 16; }
+
+    define kc: int16[-1000, 1000][16] = [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    if (kadane(kc, 5) != 15) { return 17; }
+
+    define kd: int16[-1000, 1000][16] = [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    if (kadane(kd, 1) != 7) { return 18; }
+
+    if (kadane(kd, 0) != 0) { return 19; }
+
+    if (unique_paths(1, 1) != 1) { return 20; }
+    if (unique_paths(1, 8) != 1) { return 21; }
+    if (unique_paths(8, 1) != 1) { return 22; }
+    if (unique_paths(2, 2) != 2) { return 23; }
+    if (unique_paths(3, 3) != 6) { return 24; }
+    if (unique_paths(3, 7) != 28) { return 25; }
+    if (unique_paths(8, 8) != 3432) { return 26; }
+    if (unique_paths(4, 4) != 20) { return 27; }
+
+    return 0;
+}
